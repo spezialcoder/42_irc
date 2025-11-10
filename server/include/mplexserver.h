@@ -6,7 +6,7 @@
 /*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/10 22:57:25 by lsorg            ###   ########.fr       */
+/*   Updated: 2025/11/11 00:21:23 by lsorg            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,8 +22,12 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#include <unordered_map>
+#include <vector>
 
 #define VERBOSITY_MAX 2
+#define MAX_EPOLL_EVENTS 10
+#define MAX_MSG_LEN 512
 
 namespace MPlexServer {
     /**
@@ -53,18 +57,39 @@ namespace MPlexServer {
      */
     class Client {
     public:
-        Client() = delete;
-        Client(const Client& other) = delete;
-        Client& operator=(const Client& other) = delete;
+        Client();
+        Client(const Client& other);
+        Client& operator=(const Client& other);
 
         explicit Client(int fd, sockaddr_in addr);
         ~Client();
-
     private:
-        const int fd;
-        const sockaddr_in client_addr;
+        int fd;
+        sockaddr_in client_addr;
     };
 
+    /**
+     * @brief Message class.
+     */
+    class Message final {
+    public:
+        Message();
+        Message(std::string msg, Client client);
+        Message(const Message& other);
+        Message& operator=(const Message& other);
+
+        const Client& getClient() const;
+        std::string getMessage() const;
+
+        void setMessage(std::string msg);
+        void setClient(Client& client);
+    private:
+        std::string message;
+        Client client;
+    };
+
+    enum class EVENT {CONNECTED, DISCONNECTED};
+    using EventHandler = void(*)(EVENT event, Client client);
 
     /**
      * @bief Multiplexer Server class
@@ -105,7 +130,7 @@ namespace MPlexServer {
          * @brief Sets the level of verbosity.
          * @param level Level of verbosity.
          *
-         * Level 0: No output.
+         * Level 0: Critical messages.
          * Level 1: Client connections/disconnections
          * Level 2: Transmitted data, additionally debug information and everything from level 1.
          */
@@ -116,16 +141,23 @@ namespace MPlexServer {
          */
         int getVerbose() const;
 
+        /**
+         * @brief Poll all clients and accept new clients.
+         * @return Returns a list of newly received messages
+         */
+        std::vector<Message> poll();
 
     private:
-        int fd;
+        int server_fd;
         const int port;
         const std::string ipv4;
         int verbose;
         int epollfd;
+        int clientCount;
+        std::unordered_map<int, Client> client_map;
 
         void log(const std::string message, int required_level) const;
-
+        void deleteClient(int fd);
     };
 }
 

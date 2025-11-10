@@ -2,8 +2,9 @@
 
 MPlexServer::MPlexServer::MPlexServer(uint16_t port, const std::string ipv4) : port(port), ipv4(ipv4) {
     this->verbose = 0;
-    this->fd = -1;
+    this->server_fd = -1;
     this->epollfd = -1;
+    this->clientCount = 0;
 }
 
 MPlexServer::MPlexServer::~MPlexServer() {
@@ -57,7 +58,7 @@ void MPlexServer::MPlexServer::activate() {
     }
 
     this->epollfd = epoll_fd;
-    this->fd = listen_fd;
+    this->server_fd = listen_fd;
 
     log("Server successfully activated",1);
 }
@@ -73,7 +74,7 @@ void MPlexServer::MPlexServer::log(const std::string message, const int required
 
 void MPlexServer::MPlexServer::deactivate() {
     //TODO: Proper closing
-    if (fd != -1) close(fd);
+    if (server_fd != -1) close(server_fd);
     if (epollfd != -1) close(epollfd);
 }
 
@@ -91,4 +92,66 @@ int MPlexServer::MPlexServer::getVerbose() const {
 
 int MPlexServer::MPlexServer::getConnectedClientsCount() const {
     return 0;
+}
+
+std::vector<MPlexServer::Message> MPlexServer::MPlexServer::poll() {
+    struct epoll_event events[MAX_EPOLL_EVENTS];
+    std::vector<Message> report{};
+    int numEvents = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, 0);
+    if (numEvents == -1) {
+        throw ServerError("Failed to poll epoll events");
+    }
+
+    for (int i = 0; i < numEvents; ++i) {
+        if (events[i].data.fd == this->server_fd) {
+            struct sockaddr_in client_addr;
+            socklen_t len = sizeof(client_addr);
+            int clientFd = accept(server_fd, (struct sockaddr*)&client_addr,&len);
+            if (clientFd == -1) {
+                log("Failed to accept client.",0);
+                continue;
+            }
+            struct epoll_event ev;
+            ev.events = EPOLLIN | EPOLLRDHUP;
+            ev.data.fd = clientFd;
+            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientFd, &ev) == -1) {
+                close(clientFd);
+                log("Failed to add client to epoll.",0);
+                continue;
+            }
+            client_map[clientFd] = Client(clientFd, client_addr);
+            clientCount++;
+            log("New client accepted.",1);
+        } else {
+            if (events[i].events & EPOLLIN) {
+                char buffer[MAX_MSG_LEN];
+                ssize_t n = recv(events[i].data.fd, buffer, MAX_MSG_LEN,MSG_DONTWAIT);
+                if (n==0) {
+                    log("Client disconnected.",1);
+                    //TODO: Disconnect client
+                    deleteClient(events[i].data.fd);
+                    continue;
+                }
+                size_t safe_len = std::min<size_t>(n,MAX_MSG_LEN-1);
+                buffer[safe_len] = 0;
+                report.push_back(Message(buffer,client_map[events[i].data.fd]));
+
+            }
+            if (events[i].events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
+                //TODO: Do it nicely
+                log("Client disconnected.",1);
+                deleteClient(events[i].data.fd);
+            }
+        }
+    }
+    return report;
+}
+
+void MPlexServer::MPlexServer::deleteClient(int fd) {
+    client_map.erase(fd);
+    clientCount--;
+    if (epoll_ctl(epollfd,EPOLL_CTL_DEL,fd,nullptr) == -1) {
+        log("Critical error could not delete fd from epoll.",0);
+    }
+    close(fd);
 }
