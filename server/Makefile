@@ -1,5 +1,5 @@
 CXX      := g++
-CXXFLAGS := -Wall -Wextra -Werror -std=c++17 -Iinclude
+CXXFLAGS := -Wall -Wextra -std=c++17 -Iinclude #-Werror
 AR       := ar
 ARFLAGS  := rcs
 RM       := rm -f
@@ -30,7 +30,7 @@ $(TARGET): $(OBJECTS)
 
 $(SRCDIR)/%.o: $(SRCDIR)/%.cpp
 	@printf "$(COLOR_BLUE)[mplexserver]$(COLOR_RESET) Compiling $(COLOR_YELLOW)%s$(COLOR_RESET)\n" "$@"
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	$(RM) $(OBJECTS)
