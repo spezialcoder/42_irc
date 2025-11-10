@@ -1,14 +1,20 @@
 #include <iostream>
 #include "server/include/mplexserver.h"
+using namespace MPlexServer;
 
 int main() {
-    MPlexServer::MPlexServer server(785);
+    Server server(785);
     server.setVerbose(2);
     server.activate();
+
     while (true) {
-        server.poll();
-        std::cout << "Poll" << std::endl;
-        sleep(2);
+        std::vector<Message> messages = server.poll();
+        sleep(1);
+        std::cout << "{";
+        for (const auto& message : messages) {
+            std::cout << message.getMessage() << ",";
+        }
+        std::cout << "}" << std::endl;
     }
     return 0;
 }

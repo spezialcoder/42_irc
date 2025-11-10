@@ -1,16 +1,16 @@
 #include "../include/mplexserver.h"
 
-MPlexServer::MPlexServer::MPlexServer(uint16_t port, const std::string ipv4) : port(port), ipv4(ipv4) {
+MPlexServer::Server::Server(uint16_t port, const std::string ipv4) : port(port), ipv4(ipv4) {
     this->verbose = 0;
     this->server_fd = -1;
     this->epollfd = -1;
     this->clientCount = 0;
 }
 
-MPlexServer::MPlexServer::~MPlexServer() {
+MPlexServer::Server::~Server() {
 }
 
-void MPlexServer::MPlexServer::activate() {
+void MPlexServer::Server::activate() {
     int listen_fd = socket(AF_INET,SOCK_STREAM,0);
     if (listen_fd < 0) {
         throw ServerError("Failed to open socket");
@@ -63,7 +63,7 @@ void MPlexServer::MPlexServer::activate() {
     log("Server successfully activated",1);
 }
 
-void MPlexServer::MPlexServer::log(const std::string message, const int required_level) const {
+void MPlexServer::Server::log(const std::string message, const int required_level) const {
     if (this->verbose >= required_level) {
         auto now = std::chrono::system_clock::now();
         std::time_t now_time = std::chrono::system_clock::to_time_t(now);
@@ -72,13 +72,21 @@ void MPlexServer::MPlexServer::log(const std::string message, const int required
     }
 }
 
-void MPlexServer::MPlexServer::deactivate() {
-    //TODO: Proper closing
+void MPlexServer::Server::deactivate() {
+    for (const auto& [fd,c] : client_map) {
+        if (epoll_ctl(epollfd,EPOLL_CTL_DEL,fd,nullptr) == -1) {
+            log("Critical error could not delete fd from epoll.",0);
+        }
+        close(fd);
+    }
+    this->clientCount = 0;
+    this->client_map.clear();
     if (server_fd != -1) close(server_fd);
     if (epollfd != -1) close(epollfd);
+    log("Server has been deactivated.",1);
 }
 
-void MPlexServer::MPlexServer::setVerbose(const int level) {
+void MPlexServer::Server::setVerbose(const int level) {
     if (level <= VERBOSITY_MAX && level >= 0) {
         this->verbose = level;
     } else {
@@ -86,15 +94,15 @@ void MPlexServer::MPlexServer::setVerbose(const int level) {
     }
 }
 
-int MPlexServer::MPlexServer::getVerbose() const {
+int MPlexServer::Server::getVerbose() const {
     return this->verbose;
 }
 
-int MPlexServer::MPlexServer::getConnectedClientsCount() const {
+int MPlexServer::Server::getConnectedClientsCount() const {
     return 0;
 }
 
-std::vector<MPlexServer::Message> MPlexServer::MPlexServer::poll() {
+std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
     struct epoll_event events[MAX_EPOLL_EVENTS];
     std::vector<Message> report{};
     int numEvents = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, 0);
@@ -106,39 +114,41 @@ std::vector<MPlexServer::Message> MPlexServer::MPlexServer::poll() {
         if (events[i].data.fd == this->server_fd) {
             struct sockaddr_in client_addr;
             socklen_t len = sizeof(client_addr);
-            int clientFd = accept(server_fd, (struct sockaddr*)&client_addr,&len);
-            if (clientFd == -1) {
-                log("Failed to accept client.",0);
-                continue;
+            int clientFd;
+            while ((clientFd = accept(server_fd, (struct sockaddr*)&client_addr,&len)) != -1) {
+                setNonBlocking(clientFd);
+                struct epoll_event ev;
+                ev.events = EPOLLIN | EPOLLRDHUP;
+                ev.data.fd = clientFd;
+                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientFd, &ev) == -1) {
+                    close(clientFd);
+                    log("Failed to add client to epoll.",0);
+                    continue;
+                }
+                client_map[clientFd] = Client(clientFd, client_addr);
+                clientCount++;
+                log("New client accepted.",1);
+                callHandler(EventType::CONNECTED,client_map[clientFd]);
             }
-            struct epoll_event ev;
-            ev.events = EPOLLIN | EPOLLRDHUP;
-            ev.data.fd = clientFd;
-            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientFd, &ev) == -1) {
-                close(clientFd);
-                log("Failed to add client to epoll.",0);
-                continue;
-            }
-            client_map[clientFd] = Client(clientFd, client_addr);
-            clientCount++;
-            log("New client accepted.",1);
+
         } else {
             if (events[i].events & EPOLLIN) {
                 char buffer[MAX_MSG_LEN];
                 ssize_t n = recv(events[i].data.fd, buffer, MAX_MSG_LEN,MSG_DONTWAIT);
                 if (n==0) {
                     log("Client disconnected.",1);
-                    //TODO: Disconnect client
+                    callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
                     deleteClient(events[i].data.fd);
                     continue;
                 }
                 size_t safe_len = std::min<size_t>(n,MAX_MSG_LEN-1);
                 buffer[safe_len] = 0;
                 report.push_back(Message(buffer,client_map[events[i].data.fd]));
+                log(buffer,2);
 
             }
             if (events[i].events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
-                //TODO: Do it nicely
+                callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
                 log("Client disconnected.",1);
                 deleteClient(events[i].data.fd);
             }
@@ -147,11 +157,32 @@ std::vector<MPlexServer::Message> MPlexServer::MPlexServer::poll() {
     return report;
 }
 
-void MPlexServer::MPlexServer::deleteClient(int fd) {
+void MPlexServer::Server::setOnConnect(EventHandler handler) {
+    handlers.onConnect = handler;
+}
+
+void MPlexServer::Server::setOnDisconnect(EventHandler handler) {
+    handlers.onDisconnect = handler;
+}
+
+void MPlexServer::Server::deleteClient(int fd) {
     client_map.erase(fd);
     clientCount--;
     if (epoll_ctl(epollfd,EPOLL_CTL_DEL,fd,nullptr) == -1) {
         log("Critical error could not delete fd from epoll.",0);
     }
     close(fd);
+}
+
+void MPlexServer::Server::callHandler(EventType event, Client client) const {
+    switch (event) {
+        case EventType::CONNECTED:
+            if (handlers.onConnect)
+                handlers.onConnect(event,client);
+            break;
+        case EventType::DISCONNECTED:
+            if (handlers.onDisconnect)
+                handlers.onDisconnect(event,client);
+            break;
+    }
 }

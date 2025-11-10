@@ -6,7 +6,7 @@
 /*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/11 00:21:23 by lsorg            ###   ########.fr       */
+/*   Updated: 2025/11/11 00:29:23 by lsorg            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,26 +88,26 @@ namespace MPlexServer {
         Client client;
     };
 
-    enum class EVENT {CONNECTED, DISCONNECTED};
-    using EventHandler = void(*)(EVENT event, Client client);
+    enum class EventType {CONNECTED, DISCONNECTED};
+    using EventHandler = void(*)(EventType event, Client client);
 
     /**
      * @bief Multiplexer Server class
      */
-    class MPlexServer final {
+    class Server final {
     public:
-        MPlexServer() = delete;
-        MPlexServer(const MPlexServer& other) = delete;
-        MPlexServer& operator=(const MPlexServer& other) = delete;
+        Server() = delete;
+        Server(const Server& other) = delete;
+        Server& operator=(const Server& other) = delete;
 
         /**
          * @brief Creates an MPlexServer class.
          * @param port Specifies the port for the server (port cannot be changed once set).
          * @param ipv4 Specifies the ipv4 address the server should bind to. (Default value binds to all available network interfaces)
          */
-        explicit MPlexServer(uint16_t port, std::string ipv4="");
+        explicit Server(uint16_t port, std::string ipv4="");
 
-        ~MPlexServer();
+        ~Server();
 
         /**
          * @brief Activates the server.
@@ -147,7 +147,24 @@ namespace MPlexServer {
          */
         std::vector<Message> poll();
 
+        /**
+         * @brief Sets a custom handler function which will be called when a new client connects.
+         * @param handler function of type EventHandler (void(*)(EVENT event, Client client))
+         */
+        void setOnConnect(EventHandler handler);
+
+        /**
+         * @brief Sets a custom handler function which will be called when a new client disconnects.
+         * @param handler function of type EventHandler (void(*)(EVENT event, Client client))
+         */
+        void setOnDisconnect(EventHandler handler);
+
     private:
+        using EventHandlers = struct {
+            EventHandler onConnect;
+            EventHandler onDisconnect;
+        };
+
         int server_fd;
         const int port;
         const std::string ipv4;
@@ -155,9 +172,11 @@ namespace MPlexServer {
         int epollfd;
         int clientCount;
         std::unordered_map<int, Client> client_map;
+        EventHandlers handlers{};
 
         void log(const std::string message, int required_level) const;
         void deleteClient(int fd);
+        void callHandler(EventType event, Client client) const;
     };
 }
 
