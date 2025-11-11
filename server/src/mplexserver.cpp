@@ -183,10 +183,6 @@ std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
     return report;
 }
 
-void MPlexServer::Server::setOnConnect(EventHandler handler) {
-    handlers.onConnect = handler;
-}
-
 void MPlexServer::Server::setOnDisconnect(EventHandler handler) {
     handlers.onDisconnect = handler;
 }
@@ -214,8 +210,4 @@ void MPlexServer::Server::callHandler(EventType event, Client client, Message ms
             if (handlers.onMessage)
                 handlers.onMessage(msg);
     }
-}
-
-void MPlexServer::Server::setOnMessage(MessageHandler handler) {
-    handlers.onMessage = handler;
 }

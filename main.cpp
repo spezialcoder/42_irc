@@ -1,25 +1,36 @@
 #include <iostream>
 #include "server/include/mplexserver.h"
+#include <vector>
+
 using namespace MPlexServer;
 
-constexpr int PORT=785;
+constexpr int PORT=7850;
 
-void myOnConnect(Client client) {
-    std::cout << "New client connected: " << client.getIpv4() << ", " << client.getPort() << std::endl;
-}
 
-void myOnMessage(Message msg) {
-    std::cout << "New message: " << msg.getMessage();
-}
+class User {
+public:
+    User() = default;
+
+    static void onNewMessage(Message msg, User* user) {
+        std::cout << "New message: " << msg.getMessage() << std::endl;
+        user->messages.push_back(msg);
+    }
+private:
+    std::vector<Message> messages;
+};
 
 int main() {
-    Server server(PORT);
-    server.setVerbose(0);
-    server.activate();
-    server.setOnConnect(myOnConnect);
-    server.setOnMessage(myOnMessage);
+    Server srv(PORT);
+    User userbase;
+    srv.setVerbose(2);
+    srv.setOnMessage(User::onNewMessage, &userbase);
+    try {
+        srv.activate();
+    } catch (ServerError &e) {}
+
     while (true) {
-        std::vector<Message> messages = server.poll();
+        srv.poll();
     }
+
     return 0;
 }

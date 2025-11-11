@@ -1,5 +1,5 @@
 CXX      := g++
-CXXFLAGS := -Wall -Wextra -std=c++17 -Iinclude #-Werror
+CXXFLAGS := -Wall -Wextra -std=c++17 -Iinclude -g #-Werror
 AR       := ar
 ARFLAGS  := rcs
 RM       := rm -f

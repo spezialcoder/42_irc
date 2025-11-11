@@ -1,6 +1,6 @@
 NAME     := ircserv
 CXX      := g++
-CXXFLAGS := -Wall -Wextra -Werror -std=c++17 -Iserver/include
+CXXFLAGS := -Wall -Wextra -Werror -std=c++17 -Iserver/include  -g
 LDFLAGS  :=
 RM       := rm -f
 RMDIR    := rm -rf

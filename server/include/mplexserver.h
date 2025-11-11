@@ -19,6 +19,7 @@
 #include <fcntl.h>
 #include <sys/epoll.h>
 #include <chrono>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <unordered_map>
@@ -93,8 +94,8 @@ namespace MPlexServer {
     };
 
     enum class EventType {CONNECTED, DISCONNECTED, MESSAGE};
-    using EventHandler = void(*)(Client client);
-    using MessageHandler = void(*)(Message msg);
+    using EventHandler = std::function<void(Client)>;
+    using MessageHandler = std::function<void(Message)>;
     /**
      * @bief Multiplexer Server class
      */
@@ -155,7 +156,19 @@ namespace MPlexServer {
          * @brief Sets a custom handler function which will be called when a new client connects.
          * @param handler function of type EventHandler (void(*)(Client client))
          */
-        void setOnConnect(EventHandler handler);
+        template<typename Callable, typename ... Args>
+        void setOnConnect(Callable &&c, Args &&...args) {
+            auto capturedArgs = std::make_tuple(std::forward<Args>(args)...);
+            auto fn = std::forward<Callable>(c);
+
+            handlers.onConnect = [fn = std::move(fn), capturedArgs=std::move(capturedArgs)](Client client) mutable {
+                std::apply([&](auto&&... unpackedArgs) {
+                    fn(client,std::forward<decltype(unpackedArgs)>(unpackedArgs)...);
+                },capturedArgs);
+            };
+
+        }
+
 
         /**
          * @brief Sets a custom handler function which will be called when a new client disconnects.
@@ -167,7 +180,17 @@ namespace MPlexServer {
          * @brief  Sets a custom handler function which will be called whenever a message is send.
          * @param handler function of type EventHandler (void(*)(Message msg))
          */
-        void setOnMessage(MessageHandler handler);
+        template<typename Callable, typename ... Args>
+        void setOnMessage(Callable&& c, Args&&... args) {
+            auto capturedArgs = std::make_tuple(std::forward<Args>(args)...);
+            auto fn = std::forward<Callable>(c);
+
+            handlers.onMessage = [fn = std::move(fn), capturedArgs=std::move(capturedArgs)](Message msg) mutable {
+                std::apply([&](auto&&... unpackedArgs) {
+                    fn(msg,std::forward<decltype(unpackedArgs)>(unpackedArgs)...);
+                },capturedArgs);
+            };
+        }
 
     private:
         using EventHandlers = struct {
