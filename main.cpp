@@ -6,14 +6,20 @@ using namespace MPlexServer;
 
 constexpr int PORT=7850;
 
-
-class User {
+class UserManager : public EventHandler {
 public:
-    User() = default;
+    void onConnect(Client client) override {
+        std::cout << "New client: " << client.getIpv4() << ", " << client.getPort() << std::endl;
+    }
 
-    static void onNewMessage(Message msg, User* user) {
+    void onDisconnect(Client client) override {
+        std::cout << "Client left: " << client.getIpv4() << ", " << client.getPort() << std::endl;
+
+    }
+
+    void onMessage(Message msg) override {
         std::cout << "New message: " << msg.getMessage() << std::endl;
-        user->messages.push_back(msg);
+        messages.emplace_back(msg);
     }
 private:
     std::vector<Message> messages;
@@ -21,13 +27,13 @@ private:
 
 int main() {
     Server srv(PORT);
-    User userbase;
-    srv.setVerbose(2);
-    srv.setOnMessage(User::onNewMessage, &userbase);
+    UserManager um;
+    srv.setEventHandler(&um);
     try {
         srv.activate();
-    } catch (ServerError &e) {}
-
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+    }
     while (true) {
         srv.poll();
     }

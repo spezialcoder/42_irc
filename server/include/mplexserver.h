@@ -6,7 +6,7 @@
 /*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/11 01:34:22 by lsorg            ###   ########.fr       */
+/*   Updated: 2025/11/12 00:06:11 by lsorg            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,9 +63,9 @@ namespace MPlexServer {
 
         explicit Client(int fd, sockaddr_in addr);
 
-        int getFd() const;
-        std::string getIpv4() const;
-        int getPort() const;
+        [[nodiscard]] int getFd() const;
+        [[nodiscard]] std::string getIpv4() const;
+        [[nodiscard]] int getPort() const;
 
         ~Client();
     private:
@@ -93,9 +93,13 @@ namespace MPlexServer {
         Client client;
     };
 
+    class EventHandler {
+    public:
+        virtual void onConnect(Client client) = 0;
+        virtual void onDisconnect(Client client) = 0;
+        virtual void onMessage(Message msg) = 0;
+    };
     enum class EventType {CONNECTED, DISCONNECTED, MESSAGE};
-    using EventHandler = std::function<void(Client)>;
-    using MessageHandler = std::function<void(Message)>;
     /**
      * @bief Multiplexer Server class
      */
@@ -153,52 +157,11 @@ namespace MPlexServer {
         std::vector<Message> poll();
 
         /**
-         * @brief Sets a custom handler function which will be called when a new client connects.
-         * @param handler function of type EventHandler (void(*)(Client client))
+         * @brief Set the active eventhandler instance for the server.
          */
-        template<typename Callable, typename ... Args>
-        void setOnConnect(Callable &&c, Args &&...args) {
-            auto capturedArgs = std::make_tuple(std::forward<Args>(args)...);
-            auto fn = std::forward<Callable>(c);
-
-            handlers.onConnect = [fn = std::move(fn), capturedArgs=std::move(capturedArgs)](Client client) mutable {
-                std::apply([&](auto&&... unpackedArgs) {
-                    fn(client,std::forward<decltype(unpackedArgs)>(unpackedArgs)...);
-                },capturedArgs);
-            };
-
-        }
-
-
-        /**
-         * @brief Sets a custom handler function which will be called when a new client disconnects.
-         * @param handler function of type EventHandler (void(*)(Client client))
-         */
-        void setOnDisconnect(EventHandler handler);
-
-        /**
-         * @brief  Sets a custom handler function which will be called whenever a message is send.
-         * @param handler function of type EventHandler (void(*)(Message msg))
-         */
-        template<typename Callable, typename ... Args>
-        void setOnMessage(Callable&& c, Args&&... args) {
-            auto capturedArgs = std::make_tuple(std::forward<Args>(args)...);
-            auto fn = std::forward<Callable>(c);
-
-            handlers.onMessage = [fn = std::move(fn), capturedArgs=std::move(capturedArgs)](Message msg) mutable {
-                std::apply([&](auto&&... unpackedArgs) {
-                    fn(msg,std::forward<decltype(unpackedArgs)>(unpackedArgs)...);
-                },capturedArgs);
-            };
-        }
+        void setEventHandler(EventHandler* handler);
 
     private:
-        using EventHandlers = struct {
-            EventHandler onConnect;
-            EventHandler onDisconnect;
-            MessageHandler onMessage;
-        };
-
         int server_fd;
         const int port;
         const std::string ipv4;
@@ -206,7 +169,7 @@ namespace MPlexServer {
         int epollfd;
         int clientCount;
         std::unordered_map<int, Client> client_map;
-        EventHandlers handlers{};
+        EventHandler* handler;
 
         void log(const std::string message, int required_level) const;
         void deleteClient(int fd);

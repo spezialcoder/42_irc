@@ -183,10 +183,6 @@ std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
     return report;
 }
 
-void MPlexServer::Server::setOnDisconnect(EventHandler handler) {
-    handlers.onDisconnect = handler;
-}
-
 void MPlexServer::Server::deleteClient(int fd) {
     client_map.erase(fd);
     clientCount--;
@@ -196,18 +192,21 @@ void MPlexServer::Server::deleteClient(int fd) {
     close(fd);
 }
 
+void MPlexServer::Server::setEventHandler(EventHandler *handler) {
+    this->handler = handler;
+}
+
 void MPlexServer::Server::callHandler(EventType event, Client client, Message msg) const {
+    if (handler == nullptr)
+        return;
     switch (event) {
         case EventType::CONNECTED:
-            if (handlers.onConnect)
-                handlers.onConnect(client);
+            handler->onConnect(client);
             break;
         case EventType::DISCONNECTED:
-            if (handlers.onDisconnect)
-                handlers.onDisconnect(client);
+            handler->onDisconnect(client);
             break;
         case EventType::MESSAGE:
-            if (handlers.onMessage)
-                handlers.onMessage(msg);
+            handler->onMessage(msg);
     }
 }
