@@ -6,7 +6,7 @@
 /*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/11 01:04:09 by lsorg            ###   ########.fr       */
+/*   Updated: 2025/11/11 01:34:22 by lsorg            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
@@ -93,9 +92,9 @@ namespace MPlexServer {
         Client client;
     };
 
-    enum class EventType {CONNECTED, DISCONNECTED};
+    enum class EventType {CONNECTED, DISCONNECTED, MESSAGE};
     using EventHandler = void(*)(Client client);
-
+    using MessageHandler = void(*)(Message msg);
     /**
      * @bief Multiplexer Server class
      */
@@ -154,20 +153,27 @@ namespace MPlexServer {
 
         /**
          * @brief Sets a custom handler function which will be called when a new client connects.
-         * @param handler function of type EventHandler (void(*)(EVENT event, Client client))
+         * @param handler function of type EventHandler (void(*)(Client client))
          */
         void setOnConnect(EventHandler handler);
 
         /**
          * @brief Sets a custom handler function which will be called when a new client disconnects.
-         * @param handler function of type EventHandler (void(*)(EVENT event, Client client))
+         * @param handler function of type EventHandler (void(*)(Client client))
          */
         void setOnDisconnect(EventHandler handler);
+
+        /**
+         * @brief  Sets a custom handler function which will be called whenever a message is send.
+         * @param handler function of type EventHandler (void(*)(Message msg))
+         */
+        void setOnMessage(MessageHandler handler);
 
     private:
         using EventHandlers = struct {
             EventHandler onConnect;
             EventHandler onDisconnect;
+            MessageHandler onMessage;
         };
 
         int server_fd;
@@ -181,7 +187,7 @@ namespace MPlexServer {
 
         void log(const std::string message, int required_level) const;
         void deleteClient(int fd);
-        void callHandler(EventType event, Client client) const;
+        void callHandler(EventType event, Client client, Message msg=Message()) const;
     };
 }
 

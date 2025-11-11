@@ -2,23 +2,24 @@
 #include "server/include/mplexserver.h"
 using namespace MPlexServer;
 
+constexpr int PORT=785;
+
 void myOnConnect(Client client) {
     std::cout << "New client connected: " << client.getIpv4() << ", " << client.getPort() << std::endl;
 }
 
+void myOnMessage(Message msg) {
+    std::cout << "New message: " << msg.getMessage();
+}
+
 int main() {
-    Server server(785);
+    Server server(PORT);
     server.setVerbose(0);
     server.activate();
     server.setOnConnect(myOnConnect);
+    server.setOnMessage(myOnMessage);
     while (true) {
         std::vector<Message> messages = server.poll();
-        sleep(1);
-        std::cout << "{";
-        for (const auto& message : messages) {
-            std::cout << message.getMessage() << ",";
-        }
-        std::cout << "}" << std::endl;
     }
     return 0;
 }

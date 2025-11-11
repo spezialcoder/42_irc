@@ -50,7 +50,7 @@ void MPlexServer::Server::activate() {
         throw ServerError("Failed to create epoll instance");
     }
     epoll_event ev{};
-    ev.events = EPOLLIN | EPOLLRDHUP;
+    ev.events = EPOLLIN;
     ev.data.fd = listen_fd;
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_fd, &ev) == -1) {
         close(listen_fd);
@@ -117,6 +117,7 @@ std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
             socklen_t len = sizeof(client_addr);
             int clientFd;
             while ((clientFd = accept(server_fd, (struct sockaddr*)&client_addr,&len)) != -1) {
+                len = sizeof(client_addr);
                 setNonBlocking(clientFd);
                 struct epoll_event ev;
                 ev.events = EPOLLIN | EPOLLRDHUP;
@@ -135,7 +136,7 @@ std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
         } else {
             if (events[i].events & EPOLLIN) {
                 char buffer[MAX_MSG_LEN];
-                ssize_t n = recv(events[i].data.fd, buffer, MAX_MSG_LEN,MSG_DONTWAIT);
+                ssize_t n = recv(events[i].data.fd, buffer, MAX_MSG_LEN,0);
                 if (n==0) {
                     log("Client disconnected.",1);
                     callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
@@ -168,6 +169,7 @@ std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
                 size_t safe_len = std::min<size_t>(n,MAX_MSG_LEN-1);
                 buffer[safe_len] = 0;
                 report.push_back(Message(buffer,client_map[events[i].data.fd]));
+                callHandler(EventType::MESSAGE,client_map[events[i].data.fd],report.back());
                 log(buffer,2);
 
             }
@@ -198,7 +200,7 @@ void MPlexServer::Server::deleteClient(int fd) {
     close(fd);
 }
 
-void MPlexServer::Server::callHandler(EventType event, Client client) const {
+void MPlexServer::Server::callHandler(EventType event, Client client, Message msg) const {
     switch (event) {
         case EventType::CONNECTED:
             if (handlers.onConnect)
@@ -208,5 +210,12 @@ void MPlexServer::Server::callHandler(EventType event, Client client) const {
             if (handlers.onDisconnect)
                 handlers.onDisconnect(client);
             break;
+        case EventType::MESSAGE:
+            if (handlers.onMessage)
+                handlers.onMessage(msg);
     }
+}
+
+void MPlexServer::Server::setOnMessage(MessageHandler handler) {
+    handlers.onMessage = handler;
 }
