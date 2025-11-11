@@ -6,7 +6,7 @@
 /*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/11 00:29:23 by lsorg            ###   ########.fr       */
+/*   Updated: 2025/11/11 01:04:09 by lsorg            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,7 +50,7 @@ namespace MPlexServer {
      *
      * @param fd File descriptor to be set non blocking.
      */
-    void setNonBlocking(const int fd);
+    void setNonBlocking(int fd);
 
     /**
      * @brief Client class containing information about a client.
@@ -62,10 +62,15 @@ namespace MPlexServer {
         Client& operator=(const Client& other);
 
         explicit Client(int fd, sockaddr_in addr);
+
+        int getFd() const;
+        std::string getIpv4() const;
+        int getPort() const;
+
         ~Client();
     private:
         int fd;
-        sockaddr_in client_addr;
+        sockaddr_in client_addr{};
     };
 
     /**
@@ -78,8 +83,8 @@ namespace MPlexServer {
         Message(const Message& other);
         Message& operator=(const Message& other);
 
-        const Client& getClient() const;
-        std::string getMessage() const;
+        [[nodiscard]] const Client& getClient() const;
+        [[nodiscard]] std::string getMessage() const;
 
         void setMessage(std::string msg);
         void setClient(Client& client);
@@ -89,7 +94,7 @@ namespace MPlexServer {
     };
 
     enum class EventType {CONNECTED, DISCONNECTED};
-    using EventHandler = void(*)(EventType event, Client client);
+    using EventHandler = void(*)(Client client);
 
     /**
      * @bief Multiplexer Server class

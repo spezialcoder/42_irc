@@ -18,3 +18,17 @@ MPlexServer::Client & MPlexServer::Client::operator=(const Client &other) {
     this->client_addr = other.client_addr;
     return *this;
 }
+
+int MPlexServer::Client::getFd() const {
+    return this->fd;
+}
+
+std::string MPlexServer::Client::getIpv4() const {
+    char ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &client_addr.sin_addr, ip, INET_ADDRSTRLEN);
+    return std::string(ip);
+}
+
+int MPlexServer::Client::getPort() const {
+    return ntohs(client_addr.sin_port);
+}

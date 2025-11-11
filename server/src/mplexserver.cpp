@@ -8,6 +8,7 @@ MPlexServer::Server::Server(uint16_t port, const std::string ipv4) : port(port),
 }
 
 MPlexServer::Server::~Server() {
+    deactivate();
 }
 
 void MPlexServer::Server::activate() {
@@ -99,7 +100,7 @@ int MPlexServer::Server::getVerbose() const {
 }
 
 int MPlexServer::Server::getConnectedClientsCount() const {
-    return 0;
+    return this->clientCount;
 }
 
 std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
@@ -141,6 +142,29 @@ std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
                     deleteClient(events[i].data.fd);
                     continue;
                 }
+                if (n < 0) {
+                    switch (errno) {
+                        case EAGAIN:
+                            break;
+                        case ECONNRESET:
+                            log("Connection of client has been reset",1);
+                            callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
+                            deleteClient(events[i].data.fd);
+                            break;
+                        case ETIMEDOUT:
+                            log("Client has timed out",1);
+                            callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
+                            deleteClient(events[i].data.fd);
+                            break;
+                        default:
+                            log("Unkown error occured while reading from client",1);
+                            callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
+                            deleteClient(events[i].data.fd);
+                            break;
+
+                    }
+                    continue;
+                }
                 size_t safe_len = std::min<size_t>(n,MAX_MSG_LEN-1);
                 buffer[safe_len] = 0;
                 report.push_back(Message(buffer,client_map[events[i].data.fd]));
@@ -178,11 +202,11 @@ void MPlexServer::Server::callHandler(EventType event, Client client) const {
     switch (event) {
         case EventType::CONNECTED:
             if (handlers.onConnect)
-                handlers.onConnect(event,client);
+                handlers.onConnect(client);
             break;
         case EventType::DISCONNECTED:
             if (handlers.onDisconnect)
-                handlers.onDisconnect(event,client);
+                handlers.onDisconnect(client);
             break;
     }
 }
