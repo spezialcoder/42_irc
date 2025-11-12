@@ -11,6 +11,20 @@ MPlexServer::Server::~Server() {
     deactivate();
 }
 
+void MPlexServer::Server::sendTo(const Client &c, std::string msg) {
+    if (send_buffer.find(c.getFd()) == send_buffer.end()) {
+        send_buffer[c.getFd()] = msg;
+        epoll_event ev{};
+        ev.data.fd = c.getFd();
+        ev.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP;
+        if (epoll_ctl(epollfd,EPOLL_CTL_MOD,c.getFd(),&ev) == -1) {
+            log("Couldnt modify epoll instance.",1);
+        }
+    } else {
+        send_buffer[c.getFd()] += msg;
+    }
+}
+
 void MPlexServer::Server::activate() {
     int listen_fd = socket(AF_INET,SOCK_STREAM,0);
     if (listen_fd < 0) {
@@ -84,6 +98,8 @@ void MPlexServer::Server::deactivate() {
     this->client_map.clear();
     if (server_fd != -1) close(server_fd);
     if (epollfd != -1) close(epollfd);
+    server_fd = -1;
+    epollfd = -1;
     log("Server has been deactivated.",1);
 }
 
@@ -103,12 +119,12 @@ int MPlexServer::Server::getConnectedClientsCount() const {
     return this->clientCount;
 }
 
-std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
+void MPlexServer::Server::poll() {
     struct epoll_event events[MAX_EPOLL_EVENTS];
-    std::vector<Message> report{};
     int numEvents = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, 0);
     if (numEvents == -1) {
-        throw ServerError("Failed to poll epoll events");
+        log("Failed to poll events.",0);
+        return;
     }
 
     for (int i = 0; i < numEvents; ++i) {
@@ -134,56 +150,88 @@ std::vector<MPlexServer::Message> MPlexServer::Server::poll() {
             }
 
         } else {
-            if (events[i].events & EPOLLIN) {
-                char buffer[MAX_MSG_LEN];
-                ssize_t n = recv(events[i].data.fd, buffer, MAX_MSG_LEN,0);
-                if (n==0) {
-                    log("Client disconnected.",1);
-                    callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
-                    deleteClient(events[i].data.fd);
-                    continue;
-                }
-                if (n < 0) {
-                    switch (errno) {
-                        case EAGAIN:
-                            break;
-                        case ECONNRESET:
-                            log("Connection of client has been reset",1);
-                            callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
-                            deleteClient(events[i].data.fd);
-                            break;
-                        case ETIMEDOUT:
-                            log("Client has timed out",1);
-                            callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
-                            deleteClient(events[i].data.fd);
-                            break;
-                        default:
-                            log("Unkown error occured while reading from client",1);
-                            callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
-                            deleteClient(events[i].data.fd);
-                            break;
-
-                    }
-                    continue;
-                }
-                size_t safe_len = std::min<size_t>(n,MAX_MSG_LEN-1);
-                buffer[safe_len] = 0;
-                report.push_back(Message(buffer,client_map[events[i].data.fd]));
-                callHandler(EventType::MESSAGE,client_map[events[i].data.fd],report.back());
-                log(buffer,2);
-
-            }
             if (events[i].events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
-                callHandler(EventType::DISCONNECTED,client_map[events[i].data.fd]);
                 log("Client disconnected.",1);
                 deleteClient(events[i].data.fd);
+                continue;
+            }
+            if (events[i].events & EPOLLIN) {
+                char buffer[MAX_MSG_LEN];
+                while (true) {
+                    const ssize_t n = recv(events[i].data.fd, buffer, MAX_MSG_LEN,0);
+                    if (n == 0) {
+                        log("Client disconnected (EOF)", 1);
+                        deleteClient(events[i].data.fd);
+                        break;
+                    }
+                    if (n < 0) {
+                        switch (errno) {
+                            case EAGAIN:
+                                break;
+                            case ECONNRESET:
+                                log("Connection of client has been reset",1);
+                                deleteClient(events[i].data.fd);
+                                break;
+                            case ETIMEDOUT:
+                                log("Client has timed out",1);
+                                deleteClient(events[i].data.fd);
+                                break;
+                            default:
+                                log("Unkown error occured while reading from client",1);
+                                deleteClient(events[i].data.fd);
+                                break;
+
+                        }
+                        break;
+                    }
+                    size_t safe_len = std::min<size_t>(n,MAX_MSG_LEN-1);
+                    buffer[safe_len] = 0;
+                    callHandler(EventType::MESSAGE,client_map[events[i].data.fd],Message(buffer,client_map[events[i].data.fd]));
+                    log(buffer,2);
+                }
+            }
+            if (events[i].events & EPOLLOUT) {
+                if (send_buffer.find(events[i].data.fd) == send_buffer.end()) {
+                    modifyEpollFlags(events[i].data.fd,EPOLLIN | EPOLLRDHUP);
+                    continue;
+                }
+                auto& buf = send_buffer[events[i].data.fd];
+                while (!buf.empty()) {
+                    ssize_t sent = send(events[i].data.fd, buf.data(),buf.size(),MSG_NOSIGNAL);
+                    if (sent > 0) {
+                        buf.erase(0,sent);
+                    }
+                    else if (sent < 0 && errno == EAGAIN) {
+                        break;
+                    } else {
+                        log("Unkown error occured while sending to client",0);
+                        deleteClient(events[i].data.fd);
+                        buf="";
+                        break;
+                    }
+                }
+                if (buf.empty()) {
+                    modifyEpollFlags(events[i].data.fd,EPOLLIN | EPOLLRDHUP);
+                    send_buffer.erase(events[i].data.fd);
+                }
             }
         }
     }
-    return report;
 }
 
-void MPlexServer::Server::deleteClient(int fd) {
+void MPlexServer::Server::modifyEpollFlags(const int fd, const int flags) {
+    epoll_event ev{};
+    ev.data.fd = fd;
+    ev.events = flags;
+    if (epoll_ctl(epollfd, EPOLL_CTL_MOD,fd,&ev) == -1) {
+        log("Failed to mod epoll.",0);
+    }
+}
+
+void MPlexServer::Server::deleteClient(const int fd) {
+    if (client_map.find(fd) == client_map.end())
+        return;
+    callHandler(EventType::DISCONNECTED,client_map[fd]);
     client_map.erase(fd);
     clientCount--;
     if (epoll_ctl(epollfd,EPOLL_CTL_DEL,fd,nullptr) == -1) {
@@ -208,5 +256,11 @@ void MPlexServer::Server::callHandler(EventType event, Client client, Message ms
             break;
         case EventType::MESSAGE:
             handler->onMessage(msg);
+    }
+}
+
+void MPlexServer::Server::broadcast(std::string message) {
+    for (const auto& [fd, c] : client_map) {
+        sendTo(c, message);
     }
 }

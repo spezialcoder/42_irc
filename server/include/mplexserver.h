@@ -6,7 +6,7 @@
 /*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/12 00:06:11 by lsorg            ###   ########.fr       */
+/*   Updated: 2025/11/12 02:14:20 by lsorg            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,9 +85,6 @@ namespace MPlexServer {
 
         [[nodiscard]] const Client& getClient() const;
         [[nodiscard]] std::string getMessage() const;
-
-        void setMessage(std::string msg);
-        void setClient(Client& client);
     private:
         std::string message;
         Client client;
@@ -152,14 +149,26 @@ namespace MPlexServer {
 
         /**
          * @brief Poll all clients and accept new clients.
-         * @return Returns a list of newly received messages
          */
-        std::vector<Message> poll();
+        void poll();
 
         /**
          * @brief Set the active eventhandler instance for the server.
          */
         void setEventHandler(EventHandler* handler);
+
+        /**
+         * @brief Transmits a text message to client c.
+         * @param c Client to send to.
+         * @param msg Message to send.
+         */
+        void sendTo(const Client& c, std::string msg);
+
+        /**
+         * @brief Write message to all connected clients.
+         * @param message Message to send.
+         */
+        void broadcast(std::string message);
 
     private:
         int server_fd;
@@ -169,11 +178,13 @@ namespace MPlexServer {
         int epollfd;
         int clientCount;
         std::unordered_map<int, Client> client_map;
+        std::unordered_map<int, std::string> send_buffer;
         EventHandler* handler;
 
         void log(const std::string message, int required_level) const;
-        void deleteClient(int fd);
+        void deleteClient(const int fd);
         void callHandler(EventType event, Client client, Message msg=Message()) const;
+        void modifyEpollFlags(const int fd, const int flags);
     };
 }
 
