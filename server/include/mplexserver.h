@@ -6,7 +6,7 @@
 /*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/12 02:14:20 by lsorg            ###   ########.fr       */
+/*   Updated: 2025/11/13 18:57:35 by lsorg            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -179,12 +179,16 @@ namespace MPlexServer {
         int clientCount;
         std::unordered_map<int, Client> client_map;
         std::unordered_map<int, std::string> send_buffer;
+        std::unordered_map<int, std::string> recv_buffer;
         EventHandler* handler;
 
         void log(const std::string message, int required_level) const;
         void deleteClient(const int fd);
         void callHandler(EventType event, Client client, Message msg=Message()) const;
         void modifyEpollFlags(const int fd, const int flags);
+        void recv_from_fd(int fd);
+        void send_to_fd(int fd);
+        void accept_client();
     };
 }
 

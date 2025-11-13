@@ -23,7 +23,8 @@ public:
     void onMessage(Message msg) override {
         std::cout << "New message: " << msg.getMessage() << std::endl;
         messages.emplace_back(msg);
-        srv_instance.sendTo(msg.getClient(),"Echo: "+msg.getMessage());
+        //srv_instance.sendTo(msg.getClient(),"Echo: "+msg.getMessage());
+        srv_instance.broadcast(msg.getMessage());
     }
 private:
     std::vector<Message> messages;
