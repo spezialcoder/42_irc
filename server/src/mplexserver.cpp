@@ -121,63 +121,59 @@ int MPlexServer::Server::getConnectedClientsCount() const {
     return this->clientCount;
 }
 
-void MPlexServer::Server::recv_from_fd(int fd) {
+void MPlexServer::Server::recv_from_fd(const int fd) {
     char buffer[MAX_MSG_LEN];
     std::string& r_buffer = recv_buffer[fd];
-    while (true) {
-        const ssize_t n = recv(fd, buffer, MAX_MSG_LEN,0);
-        if (n == 0) {
-            log("Client disconnected (EOF)", 1);
-            deleteClient(fd);
-            break;
-        }
-        if (n < 0) {
-            switch (errno) {
-                case EAGAIN:
-                    break;
-                case ECONNRESET:
-                    log("Connection of client has been reset",1);
-                    deleteClient(fd);
-                    break;
-                case ETIMEDOUT:
-                    log("Client has timed out",1);
-                    deleteClient(fd);
-                    break;
-                default:
-                    log("Unkown error occured while reading from client",1);
-                    deleteClient(fd);
-                    break;
-
-            }
-            break;
-        }
-        size_t safe_len = std::min<size_t>(n,MAX_MSG_LEN-1);
-        buffer[safe_len] = 0;
-        r_buffer.append(buffer);
-        if (r_buffer.find("\r\n") != std::string::npos) {
-            std::string msg = r_buffer.substr(0,r_buffer.find("\r\n")+1);
-            r_buffer.erase(0,r_buffer.find("\r\n")+1);
-            callHandler(EventType::MESSAGE,client_map[fd],Message(msg,client_map[fd]));
-        }
-        log(buffer,2);
+    const ssize_t n = recv(fd, buffer, MAX_MSG_LEN,0);
+    if (n == 0) {
+        log("Client disconnected (EOF)", 1);
+        deleteClient(fd);
+        return;
     }
+    if (n < 0) {
+        switch (errno) {
+            case EAGAIN:
+                break;
+            case ECONNRESET:
+                log("Connection of client has been reset",1);
+                deleteClient(fd);
+                break;
+            case ETIMEDOUT:
+                log("Client has timed out",1);
+                deleteClient(fd);
+                break;
+            default:
+                log("Unkown error occured while reading from client",1);
+                deleteClient(fd);
+                break;
+
+        }
+        return;
+    }
+    const size_t safe_len = std::min<size_t>(n,MAX_MSG_LEN-1);
+    buffer[safe_len] = 0;
+    r_buffer.append(buffer);
+    if (r_buffer.find("\r\n") != std::string::npos) {
+        std::string msg = r_buffer.substr(0,r_buffer.find("\r\n")+1);
+        r_buffer.erase(0,r_buffer.find("\r\n")+2);
+        callHandler(EventType::MESSAGE,client_map[fd],Message(msg,client_map[fd]));
+    }
+    log(buffer,2);
 }
 
 void MPlexServer::Server::send_to_fd(int fd) {
     auto& buf = send_buffer[fd];
-    while (!buf.empty()) {
-        ssize_t sent = send(fd, buf.data(),buf.size(),MSG_NOSIGNAL);
-        if (sent > 0) {
-            buf.erase(0,sent);
-        }
-        else if (sent < 0 && errno == EAGAIN) {
-            break;
-        } else {
-            log("Unkown error occured while sending to client",0);
-            deleteClient(fd);
-            buf="";
-            break;
-        }
+    ssize_t sent = send(fd, buf.data(),buf.size(),MSG_NOSIGNAL);
+    if (sent > 0) {
+        buf.erase(0,sent);
+    }
+    else if (sent < 0 && errno == EAGAIN) {
+        return;
+    } else {
+        log("Unkown error occured while sending to client",0);
+        deleteClient(fd);
+        modifyEpollFlags(fd,EPOLLIN | EPOLLRDHUP);
+        return;
     }
     if (buf.empty()) {
         modifyEpollFlags(fd,EPOLLIN | EPOLLRDHUP);
@@ -188,23 +184,28 @@ void MPlexServer::Server::send_to_fd(int fd) {
 void MPlexServer::Server::accept_client() {
     sockaddr_in client_addr{};
     socklen_t len = sizeof(client_addr);
-    int clientFd;
-    while ((clientFd = accept(server_fd, reinterpret_cast<sockaddr *>(&client_addr),&len)) != -1) {
-        len = sizeof(client_addr);
+    const int clientFd = accept(server_fd, reinterpret_cast<sockaddr *>(&client_addr),&len);
+    len = sizeof(client_addr);
+    try {
         setNonBlocking(clientFd);
-        epoll_event ev;
-        ev.events = EPOLLIN | EPOLLRDHUP;
-        ev.data.fd = clientFd;
-        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientFd, &ev) == -1) {
-            close(clientFd);
-            log("Failed to add client to epoll.",0);
-            continue;
-        }
-        client_map[clientFd] = Client(clientFd, client_addr);
-        clientCount++;
-        log("New client accepted.",1);
-        callHandler(EventType::CONNECTED,client_map[clientFd]);
+    } catch (std::runtime_error &e) {
+        log(e.what(),0);
+        close(clientFd);
+        return;
     }
+
+    epoll_event ev;
+    ev.events = EPOLLIN | EPOLLRDHUP;
+    ev.data.fd = clientFd;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientFd, &ev) == -1) {
+        close(clientFd);
+        log("Failed to add client to epoll.",0);
+        return;
+    }
+    client_map[clientFd] = Client(clientFd, client_addr);
+    clientCount++;
+    log("New client accepted.",1);
+    callHandler(EventType::CONNECTED,client_map[clientFd]);
 }
 
 void MPlexServer::Server::poll() {
@@ -289,6 +290,12 @@ void MPlexServer::Server::callHandler(EventType event, Client client, Message ms
 
 void MPlexServer::Server::broadcast(std::string message) {
     for (const auto& [fd, c] : client_map) {
+        sendTo(c, message);
+    }
+}
+
+void MPlexServer::Server::multisend(const std::vector<Client> &clients, std::string message) {
+    for (const auto&c : clients) {
         sendTo(c, message);
     }
 }

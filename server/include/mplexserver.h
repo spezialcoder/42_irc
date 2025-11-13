@@ -6,7 +6,7 @@
 /*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/13 18:57:35 by lsorg            ###   ########.fr       */
+/*   Updated: 2025/11/13 19:39:01 by lsorg            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,7 +130,7 @@ namespace MPlexServer {
         /**
          * @return Returns the amount of clients currently connected to the server.
          */
-        int getConnectedClientsCount() const;
+        [[nodiscard]] int getConnectedClientsCount() const;
 
         /**
          * @brief Sets the level of verbosity.
@@ -145,7 +145,7 @@ namespace MPlexServer {
         /**
          * @return Returns the current verbosity level.
          */
-        int getVerbose() const;
+        [[nodiscard]] int getVerbose() const;
 
         /**
          * @brief Poll all clients and accept new clients.
@@ -170,6 +170,14 @@ namespace MPlexServer {
          */
         void broadcast(std::string message);
 
+        /**
+         * @brief Sends a message to all clients in vector clients.
+         * @param clients Clients to send a message to.
+         * @param message Message to send.
+         */
+        void multisend(const std::vector<Client>& clients, std::string message);
+
+
     private:
         int server_fd;
         const int port;
@@ -182,10 +190,10 @@ namespace MPlexServer {
         std::unordered_map<int, std::string> recv_buffer;
         EventHandler* handler;
 
-        void log(const std::string message, int required_level) const;
-        void deleteClient(const int fd);
+        void log(std::string message, int required_level) const;
+        void deleteClient(int fd);
         void callHandler(EventType event, Client client, Message msg=Message()) const;
-        void modifyEpollFlags(const int fd, const int flags);
+        void modifyEpollFlags(int fd, int flags);
         void recv_from_fd(int fd);
         void send_to_fd(int fd);
         void accept_client();
