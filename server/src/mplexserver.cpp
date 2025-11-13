@@ -5,6 +5,7 @@ MPlexServer::Server::Server(uint16_t port, const std::string ipv4) : port(port),
     this->server_fd = -1;
     this->epollfd = -1;
     this->clientCount = 0;
+    this->handler = nullptr;
 }
 
 MPlexServer::Server::~Server() {
@@ -48,7 +49,7 @@ void MPlexServer::Server::activate() {
         addr.sin_addr.s_addr = INADDR_ANY;
     }
 
-    if (bind(listen_fd, (sockaddr*)&addr, sizeof(addr)) == -1) {
+    if (bind(listen_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) == -1) {
         close(listen_fd);
         throw ServerError("Failed to bind socket");
     }
