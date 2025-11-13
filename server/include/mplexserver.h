@@ -6,7 +6,7 @@
 /*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/13 19:39:01 by lsorg            ###   ########.fr       */
+/*   Updated: 2025/11/13 19:58:11 by lsorg            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -177,6 +177,11 @@ namespace MPlexServer {
          */
         void multisend(const std::vector<Client>& clients, std::string message);
 
+        /**
+         * @brief Disconnects a client and deletes him from the server.
+         * @param c Client to disconnect from.
+         */
+        void disconnectClient(const Client& c);
 
     private:
         int server_fd;

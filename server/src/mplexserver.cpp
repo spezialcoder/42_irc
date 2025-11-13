@@ -294,6 +294,10 @@ void MPlexServer::Server::broadcast(std::string message) {
     }
 }
 
+void MPlexServer::Server::disconnectClient(const Client &c) {
+    deleteClient(c.getFd());
+}
+
 void MPlexServer::Server::multisend(const std::vector<Client> &clients, std::string message) {
     for (const auto&c : clients) {
         sendTo(c, message);
