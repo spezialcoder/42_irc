@@ -296,6 +296,7 @@ void MPlexServer::Server::broadcast(std::string message) {
 }
 
 void MPlexServer::Server::disconnectClient(const Client &c) {
+    close(c.getFd());
     deleteClient(c.getFd());
 }
 
