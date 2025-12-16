@@ -1,0 +1,55 @@
+
+Server side
+
+"MESSAGE RECEIVED] Type: BROADCAST | From: 127.0.0.1:53558 | Raw: "Oxhead at home
+[SERVER] Alive - Uptime: 2710s
+[SERVER] Alive - Uptime: 2720s
+[SERVER] Alive - Uptime: 2730s
+[SERVER] Alive - Uptime: 2740s
+[SERVER] Alive - Uptime: 2750s
+[SERVER] Alive - Uptime: 2760s
+[SERVER] Alive - Uptime: 2770s
+"MESSAGE RECEIVED] Type: SERVER_COMMAND | From: 127.0.0.1:53564 | Raw: "/help
+[SERVER] Alive - Uptime: 2780s
+"MESSAGE RECEIVED] Type: CHAT_COMMAND | From: 127.0.0.1:53558 | Raw: "/nick Ox01
+[SERVER] Alive - Uptime: 2790s
+[SERVER] Alive - Uptime: 2800s
+"MESSAGE RECEIVED] Type: SERVER_COMMAND | From: 127.0.0.1:53564 | Raw: "/quit
+"MESSAGE RECEIVED] Type: BROADCAST | From: 127.0.0.1:53564 | Raw: "test
+[SERVER] Alive - Uptime: 2810s
+[SERVER] Alive - Uptime: 2820s
+[SERVER] Alive - Uptime: 2830s
+[SERVER] Alive - Uptime: 2840s
+[SERVER] Alive - Uptime: 2850s
+
+client 1
+Connecting to IRC server at localhost:7850
+Type your messages and press Enter.
+---
+Welcome to IRC Server! Type /help for commands.
+Testbench
+[127.0.0.1] Testbench
+[127.0.0.1] Oxhead at home
+/help
+Available commands:
+/help - Show this help
+/users - List connected users
+/msg <user> <message> - Send private message
+/nick <name> - Set nickname
+/quit - Disconnect
+/quit
+Goodbye!
+test
+[127.0.0.1] test
+
+client 2
+Connecting to IRC server at localhost:7850
+Type your messages and press Enter.
+---
+Welcome to IRC Server! Type /help for commands.
+[127.0.0.1] Testbench
+Oxhead at home
+[127.0.0.1] Oxhead at home
+/nick Ox01
+' (not yet implemented)1
+[127.0.0.1] test
