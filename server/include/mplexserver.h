@@ -39,7 +39,7 @@ namespace MPlexServer {
     };
 
     /**
-     * @brief Server errors related to it's settings.
+     * @brief Server errors related to its settings.
      */
     class ServerSettingsError final : public std::runtime_error {
     public:
@@ -66,11 +66,14 @@ namespace MPlexServer {
         [[nodiscard]] int getFd() const;
         [[nodiscard]] std::string getIpv4() const;
         [[nodiscard]] int getPort() const;
+        [[nodiscard]] std::string getNickname() const;
+        void setNickname(const std::string& nick);
 
         ~Client();
     private:
         int fd;
         sockaddr_in client_addr{};
+        std::string nickname;
     };
 
     /**
@@ -169,6 +172,13 @@ namespace MPlexServer {
          * @param message Message to send.
          */
         void broadcast(std::string message);
+
+        /**
+         * @brief Write message to all connected clients except one.
+         * @param except Client to exclude from broadcast.
+         * @param message Message to send.
+         */
+        void broadcastExcept(const Client& except, std::string message);
 
         /**
          * @brief Sends a message to all clients in vector clients.

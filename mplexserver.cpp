@@ -13,7 +13,6 @@ MPlexServer::Server::~Server() {
 }
 
 void MPlexServer::Server::sendTo(const Client &c, std::string msg) {
-    log("Queueing " + std::to_string(msg.size()) + " bytes for fd " + std::to_string(c.getFd()) + ": [" + msg.substr(0, std::min(size_t(50), msg.size())) + "...]", 2);
     if (send_buffer.find(c.getFd()) == send_buffer.end()) {
         send_buffer[c.getFd()] = msg;
         epoll_event ev{};
@@ -23,7 +22,6 @@ void MPlexServer::Server::sendTo(const Client &c, std::string msg) {
             log("Couldnt modify epoll instance.",1);
         }
     } else {
-        log("Appending to existing buffer (size was " + std::to_string(send_buffer[c.getFd()].size()) + ")", 2);
         send_buffer[c.getFd()] += msg;
     }
 }

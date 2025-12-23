@@ -1,0 +1,11 @@
+# Compiled object files
+*.o
+
+# Static libraries
+*.a
+
+# Executables
+ircserv
+
+# Python client (not part of the project)
+irc_client.py
