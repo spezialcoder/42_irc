@@ -3,7 +3,7 @@
 # Usage: ./irc_client.sh [host] [port]
 
 HOST=${1:-localhost}
-PORT=${2:-7850}
+PORT=${2:-6667}
 
 echo "Connecting to IRC server at $HOST:$PORT"
 echo "Type your messages and press Enter. Press Ctrl+C to exit."

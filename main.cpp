@@ -7,83 +7,7 @@
 
 using namespace MPlexServer;
 
-constexpr int PORT=7850;
-
-enum class MessageType {
-    SERVER_COMMAND,    // /server commands (e.g., /quit, /help)
-    CHAT_COMMAND,      // /chat commands (e.g., /msg, /nick)
-    BROADCAST,         // Regular chat message
-    PRIVATE            // Private message
-};
-
-struct ParsedMessage {
-    MessageType type;
-    std::string command;
-    std::string target;
-    std::string content;
-};
-
-class MessageParser {
-public:
-    static ParsedMessage parse(const std::string& msg) {
-        ParsedMessage result;
-        
-        // Check if message starts with /
-        if (msg.empty() || msg[0] != '/') {
-            result.type = MessageType::BROADCAST;
-            result.content = msg;
-            return result;
-        }
-        
-        // Extract command
-        std::istringstream iss(msg.substr(1));
-        std::string cmd;
-        iss >> cmd;
-        result.command = cmd;
-        
-        // Server commands
-        if (cmd == "quit" || cmd == "help" || cmd == "users" || cmd == "server") {
-            result.type = MessageType::SERVER_COMMAND;
-            std::getline(iss, result.content);
-            if (!result.content.empty() && result.content[0] == ' ')
-                result.content = result.content.substr(1);
-            return result;
-        }
-        
-        // Chat commands
-        if (cmd == "msg" || cmd == "whisper" || cmd == "pm") {
-            result.type = MessageType::PRIVATE;
-            iss >> result.target;
-            std::getline(iss, result.content);
-            if (!result.content.empty() && result.content[0] == ' ')
-                result.content = result.content.substr(1);
-            return result;
-        }
-        
-        if (cmd == "nick" || cmd == "join" || cmd == "leave") {
-            result.type = MessageType::CHAT_COMMAND;
-            std::getline(iss, result.content);
-            if (!result.content.empty() && result.content[0] == ' ')
-                result.content = result.content.substr(1);
-            return result;
-        }
-        
-        // Unknown command - treat as broadcast
-        result.type = MessageType::BROADCAST;
-        result.content = msg;
-        return result;
-    }
-    
-    static std::string typeToString(MessageType type) {
-        switch (type) {
-            case MessageType::SERVER_COMMAND: return "SERVER_COMMAND";
-            case MessageType::CHAT_COMMAND:   return "CHAT_COMMAND";
-            case MessageType::BROADCAST:      return "BROADCAST";
-            case MessageType::PRIVATE:        return "PRIVATE";
-            default: return "UNKNOWN";
-        }
-    }
-};
+constexpr int PORT=6667;
 
 class UserManager : public EventHandler {
 public:
@@ -95,6 +19,9 @@ public:
         // Assign generic nickname
         std::string genericNick = generateGenericNickname();
         setClientNickname(client, genericNick);
+        
+        // Mark client as awaiting password authentication
+        awaitingPassword[client.getFd()] = true;
         
         // IRC protocol welcome sequence with numeric replies
         // 001 RPL_WELCOME
@@ -119,126 +46,136 @@ public:
             nicknameMap.erase(nick);  // erase using nickname as key, not fd
         }
         fdToNicknameMap.erase(client.getFd());
+        awaitingPassword.erase(client.getFd());
     }
 
     void onMessage(Message msg) override {
-        ParsedMessage parsed = MessageParser::parse(msg.getMessage());
+        int fd = msg.getClient().getFd();
+        std::string rawMsg = msg.getMessage();
         std::string senderNick = getClientNickname(msg.getClient());
         
-        std::cout << "[MESSAGE RECEIVED] Type: " << MessageParser::typeToString(parsed.type) 
-                  << " | From: " << senderNick << " (" << msg.getClient().getIpv4() << ":" << msg.getClient().getPort() << ")"
-                  << " | Raw: \"" << msg.getMessage() << "\"" << std::endl;
+        // Strip trailing \r\n for processing
+        while (!rawMsg.empty() && (rawMsg.back() == '\r' || rawMsg.back() == '\n')) {
+            rawMsg.pop_back();
+        }
         
-        messages.emplace_back(msg);
+        // Handle PASS command for authentication
+        if (rawMsg.substr(0, 5) == "PASS ") {
+            std::string providedPassword = rawMsg.substr(5);
+            // TODO: Validate password against expected password
+            // For now, accept any password
+            awaitingPassword[fd] = false;
+            
+            // Send welcome messages after authentication
+            srv_instance.sendTo(msg.getClient(), ":server 001 " + senderNick + " :Welcome to the IRC Network " + senderNick + "\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 002 " + senderNick + " :Your host is server, running version 1.0\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 003 " + senderNick + " :This server was created today\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 004 " + senderNick + " :server 1.0 o o\r\n");
+            std::cout << "[AUTH] Client " << senderNick << " authenticated with PASS command" << std::endl;
+            return;
+        }
         
-        // Handle different message types
-        switch (parsed.type) {
-            case MessageType::SERVER_COMMAND:
-                handleServerCommand(msg.getClient(), parsed);
-                break;
-            case MessageType::CHAT_COMMAND:
-                handleChatCommand(msg.getClient(), parsed);
-                break;
-            case MessageType::PRIVATE:
-                handlePrivateMessage(msg.getClient(), parsed);
-                break;
-            case MessageType::BROADCAST: {
-                // Strip trailing \r\n from message content
-                std::string cleanMsg = msg.getMessage();
-                if (cleanMsg.size() >= 2 && cleanMsg.substr(cleanMsg.size()-2) == "\r\n") {
-                    cleanMsg = cleanMsg.substr(0, cleanMsg.size()-2);
-                } else if (!cleanMsg.empty() && cleanMsg.back() == '\n') {
-                    cleanMsg.pop_back();
+        // Reject commands if not authenticated
+        if (awaitingPassword.find(fd) != awaitingPassword.end() && awaitingPassword[fd]) {
+            srv_instance.sendTo(msg.getClient(), "ERROR :You must send PASS first\r\n");
+            return;
+        }
+        
+        // Parse IRC protocol messages like PRIVMSG
+        if (rawMsg.substr(0, 8) == "PRIVMSG ") {
+            // Format: PRIVMSG #channel :message or PRIVMSG target :message
+            size_t colonPos = rawMsg.find(" :");
+            if (colonPos != std::string::npos) {
+                std::string target = rawMsg.substr(8, colonPos - 8);
+                std::string content = rawMsg.substr(colonPos + 2);
+                
+                std::cout << "[PRIVMSG] From: " << senderNick << " | Target: " << target << " | Content: " << content << std::endl;
+                
+                // Check if target is a channel (starts with #)
+                if (!target.empty() && target[0] == '#') {
+                    // Broadcast to all other clients in channel
+                    srv_instance.broadcastExcept(msg.getClient(), ":" + senderNick + " PRIVMSG " + target + " :" + content + "\r\n");
+                } else {
+                    // Private message to user
+                    // TODO: Find user by nickname and send
+                    srv_instance.sendTo(msg.getClient(), ":server NOTICE " + senderNick + " :Private messaging not yet implemented\r\n");
                 }
-                // IRC protocol: :nickname PRIVMSG #channel :message
-                // Don't send to sender (IRC standard - client shows own message locally)
-                srv_instance.broadcastExcept(msg.getClient(), ":" + senderNick + " PRIVMSG #general :" + cleanMsg + "\r\n");
-                break;
+                return;
             }
         }
-    }
-    
-private:
-    void handleServerCommand(const Client& client, const ParsedMessage& parsed) {
-        if (parsed.command == "help") {
-            srv_instance.sendTo(client, "Available commands:\r\n"
-                "/help - Show this help\r\n"
-                "/users - List connected users\r\n"
-                "/msg <user> <message> - Send private message\r\n"
-                "/nick <name> - Set nickname\r\n"
-                "/quit - Disconnect\r\n");
-        } else if (parsed.command == "users") {
-            listUsers(client);
-        } else if (parsed.command == "quit") {
-            srv_instance.sendTo(client, "Goodbye!\r\n");
-        } else {
-            srv_instance.sendTo(client, "Unknown server command: /" + parsed.command + "\r\n");
-        }
-    }
-    
-    void handleChatCommand(const Client& client, const ParsedMessage& parsed) {
-        if (parsed.command == "nick") {
-            std::string newNick = parsed.content;
+        
+        // Handle NICK command
+        if (rawMsg.substr(0, 5) == "NICK ") {
+            std::string newNick = rawMsg.substr(5);
             
-            // Strip any trailing whitespace, \r, \n
-            while (!newNick.empty() && (newNick.back() == ' ' || newNick.back() == '\t' || 
-                                        newNick.back() == '\r' || newNick.back() == '\n')) {
+            // Strip whitespace
+            while (!newNick.empty() && (newNick.back() == ' ' || newNick.back() == '\t')) {
                 newNick.pop_back();
             }
-            // Strip leading whitespace
-            size_t start = 0;
-            while (start < newNick.length() && (newNick[start] == ' ' || newNick[start] == '\t')) {
-                start++;
-            }
-            newNick = newNick.substr(start);
             
-            std::string currentNick = getClientNickname(client);
+            std::string currentNick = getClientNickname(msg.getClient());
             
-            // Validate nickname
             if (newNick.empty()) {
-                // 431 ERR_NONICKNAMEGIVEN
-                srv_instance.sendTo(client, ":server 431 " + currentNick + " :No nickname given\r\n");
+                srv_instance.sendTo(msg.getClient(), ":server 431 " + currentNick + " :No nickname given\r\n");
                 return;
             }
             
-            // Check for invalid characters (spaces, special chars)
-            if (newNick.find(' ') != std::string::npos || newNick.find('\t') != std::string::npos) {
-                // 432 ERR_ERRONEUSNICKNAME
-                srv_instance.sendTo(client, ":server 432 " + currentNick + " " + newNick + " :Erroneous nickname\r\n");
+            if (!isValidNick(newNick)) {
+                srv_instance.sendTo(msg.getClient(), ":server 432 " + currentNick + " " + newNick + " :Erroneous nickname\r\n");
                 return;
             }
             
-            // Check nickname length
-            if (newNick.length() > 20) {
-                // 432 ERR_ERRONEUSNICKNAME
-                srv_instance.sendTo(client, ":server 432 " + currentNick + " " + newNick + " :Erroneous nickname (too long)\r\n");
+            if (isNicknameTaken(newNick)) {
+                srv_instance.sendTo(msg.getClient(), ":server 433 " + currentNick + " " + newNick + " :Nickname is already in use\r\n");
                 return;
             }
             
-            // Check if nickname is already taken
-            if (isNicknameTaken(newNick) && getClientNickname(client) != newNick) {
-                // 433 ERR_NICKNAMEINUSE
-                srv_instance.sendTo(client, ":server 433 " + currentNick + " " + newNick + " :Nickname is already in use\r\n");
-                return;
-            }
-            
-            std::string oldNick = getClientNickname(client);
-            setClientNickname(client, newNick);
-            
-            // IRC protocol: :oldnick NICK :newnick
-            srv_instance.broadcast(":" + oldNick + " NICK :" + newNick + "\r\n");
-            
-            std::cout << "[NICK] " << oldNick << " changed nickname to " << newNick << std::endl;
-        } else {
-            srv_instance.sendTo(client, "Chat command /" + parsed.command + " not yet implemented.\r\n");
+            setClientNickname(msg.getClient(), newNick);
+            srv_instance.sendTo(msg.getClient(), ":" + currentNick + " NICK :" + newNick + "\r\n");
+            srv_instance.broadcastExcept(msg.getClient(), ":" + currentNick + " NICK :" + newNick + "\r\n");
+            std::cout << "[NICK] " << currentNick << " changed nickname to " << newNick << std::endl;
+            return;
         }
+        
+        // Handle QUIT command
+        if (rawMsg.substr(0, 4) == "QUIT") {
+            std::string quitMsg = "Client quit";
+            size_t colonPos = rawMsg.find(" :");
+            if (colonPos != std::string::npos) {
+                quitMsg = rawMsg.substr(colonPos + 2);
+            }
+            srv_instance.sendTo(msg.getClient(), ":server NOTICE " + senderNick + " :Goodbye!\r\n");
+            srv_instance.disconnectClient(msg.getClient());
+            return;
+        }
+        
+        // Handle WHO command (list users)
+        if (rawMsg == "WHO" || rawMsg.substr(0, 4) == "WHO ") {
+            // 352 RPL_WHOREPLY format: <channel> <user> <host> <server> <nick> <H|G> :<hopcount> <real name>
+            for (const auto& [fd, nickname] : fdToNicknameMap) {
+                srv_instance.sendTo(msg.getClient(), ":server 352 " + senderNick + " * " + nickname + " localhost server " + nickname + " H :0 " + nickname + "\r\n");
+            }
+            // 315 RPL_ENDOFWHO
+            srv_instance.sendTo(msg.getClient(), ":server 315 " + senderNick + " * :End of WHO list\r\n");
+            return;
+        }
+        
+        // Unknown command
+        std::string cmd = rawMsg.substr(0, rawMsg.find(' '));
+        srv_instance.sendTo(msg.getClient(), ":server 421 " + senderNick + " " + cmd + " :Unknown command\r\n");
     }
     
-    void handlePrivateMessage(const Client& client, const ParsedMessage& parsed) {
-        srv_instance.sendTo(client, "Private messaging not yet fully implemented. Target: " + parsed.target + "\r\n");
-    }
-
 private:
+    // Validate nickname according to IRC standards
+    bool isValidNick(const std::string& nick) const {
+        if (nick.empty() || nick.size() > 32) return false;
+        static const std::string bad = " ,*?!@:.";
+        for (char c : nick) {
+            if (bad.find(c) != std::string::npos) return false;
+        }
+        return true;
+    }
+    
     // Generate a generic nickname for new clients
     std::string generateGenericNickname() {
         std::string nick = "Guest" + std::to_string(nextGuestId++);
@@ -282,35 +219,13 @@ private:
         }
         return "Unknown";
     }
-    
-    // List all connected users (IRC protocol: 353 RPL_NAMREPLY, 366 RPL_ENDOFNAMES)
-    void listUsers(const Client& client) {
-        std::string requesterNick = getClientNickname(client);
-        
-        // Build user list
-        std::string userList;
-        for (const auto& [fd, nickname] : fdToNicknameMap) {
-            if (!userList.empty()) {
-                userList += " ";
-            }
-            userList += nickname;
-        }
-        
-        // Send both messages as one to avoid buffer issues
-        std::string response;
-        // 353 RPL_NAMREPLY - Format: :server 353 nickname = #channel :user list
-        response += ":server 353 " + requesterNick + " = #general :" + userList + "\r\n";
-        // 366 RPL_ENDOFNAMES - Format: :server 366 nickname #channel :End of /NAMES list
-        response += ":server 366 " + requesterNick + " #general :End of /NAMES list\r\n";
-        
-        srv_instance.sendTo(client, response);
-    }
 
     std::vector<Message> messages;
     Server& srv_instance;
     int nextGuestId;
     std::map<std::string, int> nicknameMap;  // nickname -> fd
     std::map<int, std::string> fdToNicknameMap;  // fd -> nickname
+    std::map<int, bool> awaitingPassword;  // fd -> awaiting password auth
 };
 
 int main() {

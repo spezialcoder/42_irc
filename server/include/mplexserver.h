@@ -113,8 +113,9 @@ namespace MPlexServer {
          * @brief Creates an MPlexServer class.
          * @param port Specifies the port for the server (port cannot be changed once set).
          * @param ipv4 Specifies the ipv4 address the server should bind to. (Default value binds to all available network interfaces)
+         * @param password Specifies the server password. (Default: "DaLeMa26")
          */
-        explicit Server(uint16_t port, std::string ipv4="");
+        explicit Server(uint16_t port = 6667, std::string ipv4 = "", std::string password = "DaLeMa26");
 
         ~Server();
 
@@ -193,6 +194,12 @@ namespace MPlexServer {
          */
         void disconnectClient(const Client& c);
 
+        /**
+         * @brief Handles communication with a connected client.
+         * @param clientSocket The file descriptor of the client socket.
+         */
+        void handleClient(int clientSocket);
+
     private:
         int server_fd;
         const int port;
@@ -200,6 +207,7 @@ namespace MPlexServer {
         int verbose;
         int epollfd;
         int clientCount;
+        std::string password; // Server password
         std::unordered_map<int, Client> client_map;
         std::unordered_map<int, std::string> send_buffer;
         std::unordered_map<int, std::string> recv_buffer;

@@ -70,10 +70,11 @@ Data types
 
 Server
 - `class Server`
-  - Deleted default/copy/assign — must be constructed with a port.
-  - `explicit Server(uint16_t port, std::string ipv4 = "");`
+  - Deleted default/copy/assign — must be constructed with a port and password or defaults to "6667" and "DaLeMa26".
+  - `explicit Server(uint16_t port, std::string ipv4 = "", std::string password = "DaLeMa26");`
     - `port`: TCP port to listen on (fixed after construction).
     - `ipv4`: optional bind address; empty means all interfaces (`INADDR_ANY`).
+    - `password`: optional server password; defaults to `DaLeMa26`.
   - `~Server();`
     - Automatically calls `deactivate()` if still active.
 

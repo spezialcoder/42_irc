@@ -98,9 +98,10 @@ class IRCFormatter:
         return raw_message
 
 class IRCClient:
-    def __init__(self, host='localhost', port=7850):
+    def __init__(self, host='localhost', port=6667, password='DaLeMa26'):
         self.host = host
         self.port = port
+        self.password = password
         self.sock = None
         self.recv_buffer = ""
         self.running = False
@@ -113,16 +114,74 @@ class IRCClient:
             self.sock.connect((self.host, self.port))
             self.running = True
             print(f"Connected to {self.host}:{self.port}")
-            return True
+
+            # Send PASS command (standard IRC authentication)
+            self.sock.sendall(f'PASS {self.password}\r\n'.encode('utf-8'))
+            print("Connected to server. Type messages and press Enter. Type '/quit' to exit.")
+            try:
+                while True:
+                    sockets = [self.sock, sys.stdin]
+                    readable, _, _ = select.select(sockets, [], [])
+
+                    for s in readable:
+                        if s == self.sock:
+                            # Receive message from server
+                            message = self.sock.recv(1024).decode()
+                            if not message:
+                                print("Disconnected from server.")
+                                return
+                            print(message.strip())
+                        else:
+                            # Send user input to server
+                            user_input = input()
+                            if user_input.strip().lower() == '/quit':
+                                print("Exiting client.")
+                                return
+                            self.send_message(user_input)
+            except KeyboardInterrupt:
+                print("\nExiting client.")
+                return
         except Exception as e:
             print(f"Connection failed: {e}")
             return False
     
     def send_message(self, message):
-        """Send a message to the server with proper CRLF"""
+        """Send a message to the server with proper formatting"""
         try:
-            # IRC protocol requires CRLF line endings
-            self.sock.sendall((message.rstrip('\r\n') + '\r\n').encode('utf-8'))
+            # Convert user-friendly /commands to IRC protocol commands
+            if message.startswith("/"):
+                cmd_parts = message[1:].split(' ', 1)
+                cmd = cmd_parts[0].upper()
+                args = cmd_parts[1] if len(cmd_parts) > 1 else ""
+                
+                # Map common commands
+                if cmd == "NICK":
+                    formatted_message = f"NICK {args}"
+                elif cmd == "QUIT":
+                    formatted_message = f"QUIT :{args}" if args else "QUIT"
+                elif cmd == "WHO" or cmd == "USERS":
+                    formatted_message = "WHO"
+                elif cmd == "MSG" and args:
+                    # /msg target message -> PRIVMSG target :message
+                    msg_parts = args.split(' ', 1)
+                    if len(msg_parts) == 2:
+                        formatted_message = f"PRIVMSG {msg_parts[0]} :{msg_parts[1]}"
+                    else:
+                        print("Usage: /msg <target> <message>")
+                        return
+                elif cmd == "JOIN" and args:
+                    formatted_message = f"JOIN {args}"
+                elif cmd == "PART" and args:
+                    formatted_message = f"PART {args}"
+                else:
+                    # Unknown command, send as-is without /
+                    formatted_message = message[1:]
+            else:
+                # Regular text - wrap in PRIVMSG for channel
+                formatted_message = f"PRIVMSG #general :{message}"
+
+            # Send the formatted message
+            self.sock.sendall((formatted_message.rstrip('\r\n') + '\r\n').encode('utf-8'))
         except Exception as e:
             print(f"Send error: {e}")
             self.running = False
@@ -163,7 +222,7 @@ class IRCClient:
     
     def input_loop(self):
         """Handle user input"""
-        print("\nType messages and press Enter. Commands: /nick <name>, /users, /help, /quit")
+        print("\nType messages and press Enter. Commands: /nick <name>, /who, /quit")
         print("---")
         
         while self.running:
@@ -208,12 +267,14 @@ class IRCClient:
                 self.sock.close()
             print("[Disconnected]")
 
-def main():
-    host = sys.argv[1] if len(sys.argv) > 1 else 'localhost'
-    port = int(sys.argv[2]) if len(sys.argv) > 2 else 7850
-    
-    client = IRCClient(host, port)
-    client.run()
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python3 irc_client_proper.py <password> [host] [port]")
+        sys.exit(1)
 
-if __name__ == '__main__':
-    main()
+    password = sys.argv[1]
+    host = sys.argv[2] if len(sys.argv) > 2 else 'localhost'
+    port = int(sys.argv[3]) if len(sys.argv) > 3 else 6667
+
+    client = IRCClient(host, port, password)
+    client.connect()

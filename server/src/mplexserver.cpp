@@ -1,6 +1,10 @@
 #include "../include/mplexserver.h"
+#include <iomanip>
+#include <sstream>
 
-MPlexServer::Server::Server(uint16_t port, const std::string ipv4) : port(port), ipv4(ipv4) {
+MPlexServer::Server::Server(uint16_t port, const std::string ipv4, const std::string password)
+    : port(port == 0 ? 6667 : port), ipv4(ipv4), password(password.empty() ? "DaLeMa26" : password) {
+    // Default port is 6667 and default PW is DaLeMa26 if not specified
     this->verbose = 0;
     this->server_fd = -1;
     this->epollfd = -1;
@@ -13,7 +17,7 @@ MPlexServer::Server::~Server() {
 }
 
 void MPlexServer::Server::sendTo(const Client &c, std::string msg) {
-    log("Queueing " + std::to_string(msg.size()) + " bytes for fd " + std::to_string(c.getFd()) + ": [" + msg.substr(0, std::min(size_t(50), msg.size())) + "...]", 2);
+    log("Queueing " + std::to_string(msg.size()) + " bytes for fd " + std::to_string(c.getFd()) + ": [" + msg.substr(0, std::min(size_t(50), msg.size())) + "...", 2);
     if (send_buffer.find(c.getFd()) == send_buffer.end()) {
         send_buffer[c.getFd()] = msg;
         epoll_event ev{};
@@ -329,4 +333,27 @@ void MPlexServer::Server::multisend(const std::vector<Client> &clients, std::str
     for (const auto&c : clients) {
         sendTo(c, message);
     }
+}
+
+void MPlexServer::Server::handleClient(int clientSocket) {
+    char buffer[1024];
+    ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    if (bytesRead <= 0) {
+        log("Failed to read password or client disconnected.", 1);
+        close(clientSocket);
+        return;
+    }
+
+    buffer[bytesRead] = '\0'; // Null-terminate the received data
+    std::string receivedPassword(buffer);
+    receivedPassword.erase(receivedPassword.find_last_not_of("\r\n") + 1);
+
+    if (receivedPassword != password) {  // Compare plain-text passwords
+        log("Client provided incorrect password. Disconnecting.", 1);
+        close(clientSocket);
+        return;
+    }
+
+    log("Client authenticated successfully.", 1);
+    // Proceed with further client handling...
 }
