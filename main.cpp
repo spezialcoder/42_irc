@@ -47,6 +47,8 @@ public:
         }
         fdToNicknameMap.erase(client.getFd());
         awaitingPassword.erase(client.getFd());
+        usernameMap.erase(client.getFd());
+        realnameMap.erase(client.getFd());
     }
 
     void onMessage(Message msg) override {
@@ -137,6 +139,56 @@ public:
             return;
         }
         
+        // Handle USER command (required for IRC registration)
+        if (rawMsg.substr(0, 5) == "USER ") {
+            // Format: USER username 0 * :Real Name
+            std::istringstream iss(rawMsg.substr(5));
+            std::string username, mode, unused;
+            iss >> username >> mode >> unused;
+            
+            // Extract real name after the colon
+            std::string realname;
+            size_t colonPos = rawMsg.find(" :");
+            if (colonPos != std::string::npos) {
+                realname = rawMsg.substr(colonPos + 2);
+            } else {
+                realname = username;  // Fallback to username if no realname provided
+            }
+            
+            // Store username and realname
+            usernameMap[fd] = username;
+            realnameMap[fd] = realname;
+            
+            std::cout << "[USER] Client " << senderNick << " set username: " << username 
+                      << ", realname: " << realname << std::endl;
+            return;
+        }
+        
+        // Handle PING command (keepalive)
+        if (rawMsg.substr(0, 5) == "PING ") {
+            std::string token = rawMsg.substr(5);
+            srv_instance.sendTo(msg.getClient(), "PONG server :" + token + "\r\n");
+            return;
+        }
+        
+        if (rawMsg == "PING") {
+            srv_instance.sendTo(msg.getClient(), "PONG server\r\n");
+            return;
+        }
+        
+        // Handle CAP command (capability negotiation - just end it)
+        if (rawMsg.substr(0, 4) == "CAP ") {
+            std::string capCmd = rawMsg.substr(4);
+            if (capCmd.substr(0, 2) == "LS") {
+                // List capabilities - we support none, so send empty
+                srv_instance.sendTo(msg.getClient(), ":server CAP * LS :\r\n");
+            } else if (capCmd.substr(0, 3) == "END") {
+                // Client ending capability negotiation
+                std::cout << "[CAP] Client " << senderNick << " ended capability negotiation" << std::endl;
+            }
+            return;
+        }
+        
         // Handle QUIT command
         if (rawMsg.substr(0, 4) == "QUIT") {
             std::string quitMsg = "Client quit";
@@ -152,8 +204,16 @@ public:
         // Handle WHO command (list users)
         if (rawMsg == "WHO" || rawMsg.substr(0, 4) == "WHO ") {
             // 352 RPL_WHOREPLY format: <channel> <user> <host> <server> <nick> <H|G> :<hopcount> <real name>
-            for (const auto& [fd, nickname] : fdToNicknameMap) {
-                srv_instance.sendTo(msg.getClient(), ":server 352 " + senderNick + " * " + nickname + " localhost server " + nickname + " H :0 " + nickname + "\r\n");
+            for (const auto& [clientFd, nickname] : fdToNicknameMap) {
+                // Get username and realname if set, otherwise use nickname as fallback
+                std::string username = (usernameMap.find(clientFd) != usernameMap.end()) 
+                                       ? usernameMap.at(clientFd) : nickname;
+                std::string realname = (realnameMap.find(clientFd) != realnameMap.end()) 
+                                       ? realnameMap.at(clientFd) : nickname;
+                
+                srv_instance.sendTo(msg.getClient(), ":server 352 " + senderNick + " * " 
+                                   + username + " localhost server " + nickname 
+                                   + " H :0 " + realname + "\r\n");
             }
             // 315 RPL_ENDOFWHO
             srv_instance.sendTo(msg.getClient(), ":server 315 " + senderNick + " * :End of WHO list\r\n");
@@ -226,6 +286,8 @@ private:
     std::map<std::string, int> nicknameMap;  // nickname -> fd
     std::map<int, std::string> fdToNicknameMap;  // fd -> nickname
     std::map<int, bool> awaitingPassword;  // fd -> awaiting password auth
+    std::map<int, std::string> usernameMap;  // fd -> username (for USER command)
+    std::map<int, std::string> realnameMap;  // fd -> realname (for USER command)
 };
 
 int main() {
