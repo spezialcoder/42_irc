@@ -123,6 +123,34 @@ public:
             srv_instance.sendTo(msg.getClient(), ":" + currentNick + " NICK :" + newNick + "\r\n");
             srv_instance.broadcastExcept(msg.getClient(), ":" + currentNick + " NICK :" + newNick + "\r\n");
             std::cout << "[NICK] " << currentNick << " changed nickname to " << newNick << std::endl;
+            
+            // If client is authenticated and has a real nickname (not Guest*), complete registration
+            bool isAuthenticated = (awaitingPassword.find(fd) == awaitingPassword.end() || !awaitingPassword[fd]);
+            bool hasRealNick = (newNick.substr(0, 5) != "Guest");
+            
+            if (isAuthenticated && hasRealNick) {
+                // Send welcome messages (001-004)
+                srv_instance.sendTo(msg.getClient(), ":server 001 " + newNick + " :Welcome to the IRC Network " + newNick + "\r\n");
+                srv_instance.sendTo(msg.getClient(), ":server 002 " + newNick + " :Your host is server, running version 1.0\r\n");
+                srv_instance.sendTo(msg.getClient(), ":server 003 " + newNick + " :This server was created today\r\n");
+                srv_instance.sendTo(msg.getClient(), ":server 004 " + newNick + " :server 1.0 o o\r\n");
+                
+                // Auto-join to #general channel
+                srv_instance.sendTo(msg.getClient(), ":" + newNick + " JOIN :#general\r\n");
+                srv_instance.sendTo(msg.getClient(), ":server 331 " + newNick + " #general :No topic is set\r\n");
+                
+                // Send names list for the channel
+                std::string namesList = "";
+                for (const auto& [clientFd, nickname] : fdToNicknameMap) {
+                    if (!namesList.empty()) namesList += " ";
+                    namesList += nickname;
+                }
+                srv_instance.sendTo(msg.getClient(), ":server 353 " + newNick + " = #general :" + namesList + "\r\n");
+                srv_instance.sendTo(msg.getClient(), ":server 366 " + newNick + " #general :End of NAMES list\r\n");
+                
+                std::cout << "[REGISTER] Client " << newNick << " fully registered and joined #general" << std::endl;
+            }
+            
             return;
         }
         
