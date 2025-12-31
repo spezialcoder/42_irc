@@ -22,16 +22,6 @@ public:
         
         // Mark client as awaiting password authentication
         awaitingPassword[client.getFd()] = true;
-        
-        // IRC protocol welcome sequence with numeric replies
-        // 001 RPL_WELCOME
-        srv_instance.sendTo(client, ":server 001 " + genericNick + " :Welcome to the IRC Network " + genericNick + "\r\n");
-        // 002 RPL_YOURHOST
-        srv_instance.sendTo(client, ":server 002 " + genericNick + " :Your host is server, running version 1.0\r\n");
-        // 003 RPL_CREATED
-        srv_instance.sendTo(client, ":server 003 " + genericNick + " :This server was created today\r\n");
-        // 004 RPL_MYINFO
-        srv_instance.sendTo(client, ":server 004 " + genericNick + " :server 1.0 o o\r\n");
     }
 
     void onDisconnect(Client client) override {
@@ -68,12 +58,26 @@ public:
             // For now, accept any password
             awaitingPassword[fd] = false;
             
-            // Send welcome messages after authentication
+            // Send welcome messages after authentication (001-004)
             srv_instance.sendTo(msg.getClient(), ":server 001 " + senderNick + " :Welcome to the IRC Network " + senderNick + "\r\n");
             srv_instance.sendTo(msg.getClient(), ":server 002 " + senderNick + " :Your host is server, running version 1.0\r\n");
             srv_instance.sendTo(msg.getClient(), ":server 003 " + senderNick + " :This server was created today\r\n");
             srv_instance.sendTo(msg.getClient(), ":server 004 " + senderNick + " :server 1.0 o o\r\n");
-            std::cout << "[AUTH] Client " << senderNick << " authenticated with PASS command" << std::endl;
+            
+            // Auto-join to #general channel
+            srv_instance.sendTo(msg.getClient(), ":" + senderNick + " JOIN :#general\r\n");
+            // Send topic (332) or no topic (331)
+            srv_instance.sendTo(msg.getClient(), ":server 331 " + senderNick + " #general :No topic is set\r\n");
+            // Send names list for the channel (353 + 366)
+            std::string namesList = "";
+            for (const auto& [clientFd, nickname] : fdToNicknameMap) {
+                if (!namesList.empty()) namesList += " ";
+                namesList += nickname;
+            }
+            srv_instance.sendTo(msg.getClient(), ":server 353 " + senderNick + " = #general :" + namesList + "\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 366 " + senderNick + " #general :End of NAMES list\r\n");
+            
+            std::cout << "[AUTH] Client " << senderNick << " authenticated and joined #general" << std::endl;
             return;
         }
         
@@ -167,11 +171,13 @@ public:
         // Handle PING command (keepalive)
         if (rawMsg.substr(0, 5) == "PING ") {
             std::string token = rawMsg.substr(5);
+            std::cout << "[PING] Received PING with token: " << token << std::endl;
             srv_instance.sendTo(msg.getClient(), "PONG server :" + token + "\r\n");
             return;
         }
         
         if (rawMsg == "PING") {
+            std::cout << "[PING] Received PING without token" << std::endl;
             srv_instance.sendTo(msg.getClient(), "PONG server\r\n");
             return;
         }
@@ -222,6 +228,7 @@ public:
         
         // Unknown command
         std::string cmd = rawMsg.substr(0, rawMsg.find(' '));
+        std::cout << "[UNKNOWN CMD] '" << cmd << "' | Full message: '" << rawMsg << "'" << std::endl;
         srv_instance.sendTo(msg.getClient(), ":server 421 " + senderNick + " " + cmd + " :Unknown command\r\n");
     }
     
