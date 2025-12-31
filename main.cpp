@@ -51,6 +51,9 @@ public:
             rawMsg.pop_back();
         }
         
+        // Debug: Log ALL incoming commands
+        std::cout << "[DEBUG] Received from " << senderNick << " (fd:" << fd << "): '" << rawMsg << "'" << std::endl;
+        
         // Handle PASS command for authentication
         if (rawMsg.substr(0, 5) == "PASS ") {
             std::string providedPassword = rawMsg.substr(5);
