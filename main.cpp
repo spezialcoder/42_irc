@@ -4,6 +4,7 @@
 #include "server/include/mplexserver.h"
 #include <vector>
 #include <map>
+#include <set>
 
 using namespace MPlexServer;
 
@@ -39,6 +40,7 @@ public:
         awaitingPassword.erase(client.getFd());
         usernameMap.erase(client.getFd());
         realnameMap.erase(client.getFd());
+        registeredClients.erase(client.getFd());
     }
 
     void onMessage(Message msg) override {
@@ -52,7 +54,7 @@ public:
         }
         
         // Debug: Log ALL incoming commands
-        std::cout << "[DEBUG] Received from " << senderNick << " (fd:" << fd << "): '" << rawMsg << "'" << std::endl;
+        std::cout << "[DEBUG] From " << senderNick << ": '" << rawMsg << "'" << std::endl;
         
         // Handle PASS command for authentication
         if (rawMsg.substr(0, 5) == "PASS ") {
@@ -124,11 +126,13 @@ public:
             srv_instance.broadcastExcept(msg.getClient(), ":" + currentNick + " NICK :" + newNick + "\r\n");
             std::cout << "[NICK] " << currentNick << " changed nickname to " << newNick << std::endl;
             
-            // If client is authenticated and has a real nickname (not Guest*), complete registration
+            // If client is authenticated and has a real nickname (not Guest*), complete registration (only if not already registered)
             bool isAuthenticated = (awaitingPassword.find(fd) == awaitingPassword.end() || !awaitingPassword[fd]);
             bool hasRealNick = (newNick.substr(0, 5) != "Guest");
+            bool alreadyRegistered = (registeredClients.find(fd) != registeredClients.end());
             
-            if (isAuthenticated && hasRealNick) {
+            if (isAuthenticated && hasRealNick && !alreadyRegistered) {
+                registeredClients.insert(fd);
                 // Send welcome messages (001-004)
                 srv_instance.sendTo(msg.getClient(), ":server 001 " + newNick + " :Welcome to the IRC Network " + newNick + "\r\n");
                 srv_instance.sendTo(msg.getClient(), ":server 002 " + newNick + " :Your host is server, running version 1.0\r\n");
@@ -177,6 +181,15 @@ public:
             std::cout << "[USER] Client " << senderNick << " set username: " << username 
                       << ", realname: " << realname << std::endl;
             
+            // Only send welcome if not already registered
+            bool alreadyRegistered = (registeredClients.find(fd) != registeredClients.end());
+            if (alreadyRegistered) {
+                std::cout << "[USER] Client already registered, skipping welcome messages" << std::endl;
+                return;
+            }
+            
+            registeredClients.insert(fd);
+            
             // Registration complete - send welcome messages (001-004)
             srv_instance.sendTo(msg.getClient(), ":server 001 " + senderNick + " :Welcome to the IRC Network " + senderNick + "\r\n");
             srv_instance.sendTo(msg.getClient(), ":server 002 " + senderNick + " :Your host is server, running version 1.0\r\n");
@@ -221,7 +234,6 @@ public:
         // Handle CAP command (capability negotiation - just end it)
         if (rawMsg.substr(0, 4) == "CAP ") {
             std::string capCmd = rawMsg.substr(4);
-            std::cout << "[CAP] Client " << senderNick << " sent: '" << capCmd << "'" << std::endl;
             if (capCmd.substr(0, 2) == "LS" || capCmd.find("LS") != std::string::npos) {
                 // List capabilities - we support none, so send empty
                 srv_instance.sendTo(msg.getClient(), ":server CAP * LS :\r\n");
@@ -300,6 +312,25 @@ private:
         return false;
     }
     
+    // Get nickname for a client
+    std::string getClientNickname(const Client& client) const {
+        int fd = client.getFd();
+        auto it = fdToNicknameMap.find(fd);
+        if (it != fdToNicknameMap.end()) {
+            return it->second;
+        }
+        return "Unknown";
+    }
+    
+    // Send PING to all connected clients
+    void sendPingToAll() {
+        for (const auto& [fd, nickname] : fdToNicknameMap) {
+            // Find client by fd - we need to iterate through server's clients
+            // For simplicity, just track that we need to ping
+            std::cout << "[PING] Would send keepalive to " << nickname << " (fd:" << fd << ")" << std::endl;
+        }
+    }
+    
     // Set nickname for a client
     void setClientNickname(const Client& client, const std::string& nick) {
         int fd = client.getFd();
@@ -313,16 +344,6 @@ private:
         fdToNicknameMap[fd] = nick;
         nicknameMap[nick] = fd;
     }
-    
-    // Get nickname for a client
-    std::string getClientNickname(const Client& client) const {
-        int fd = client.getFd();
-        auto it = fdToNicknameMap.find(fd);
-        if (it != fdToNicknameMap.end()) {
-            return it->second;
-        }
-        return "Unknown";
-    }
 
     std::vector<Message> messages;
     Server& srv_instance;
@@ -332,6 +353,7 @@ private:
     std::map<int, bool> awaitingPassword;  // fd -> awaiting password auth
     std::map<int, std::string> usernameMap;  // fd -> username (for USER command)
     std::map<int, std::string> realnameMap;  // fd -> realname (for USER command)
+    std::set<int> registeredClients;  // Track which clients have completed registration
 };
 
 int main() {
