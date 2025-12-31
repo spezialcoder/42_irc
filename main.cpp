@@ -193,10 +193,11 @@ public:
         // Handle CAP command (capability negotiation - just end it)
         if (rawMsg.substr(0, 4) == "CAP ") {
             std::string capCmd = rawMsg.substr(4);
-            if (capCmd.substr(0, 2) == "LS") {
+            std::cout << "[CAP] Client " << senderNick << " sent: '" << capCmd << "'" << std::endl;
+            if (capCmd.substr(0, 2) == "LS" || capCmd.find("LS") != std::string::npos) {
                 // List capabilities - we support none, so send empty
                 srv_instance.sendTo(msg.getClient(), ":server CAP * LS :\r\n");
-            } else if (capCmd.substr(0, 3) == "END") {
+            } else if (capCmd.substr(0, 3) == "END" || capCmd.find("END") != std::string::npos) {
                 // Client ending capability negotiation
                 std::cout << "[CAP] Client " << senderNick << " ended capability negotiation" << std::endl;
             }
