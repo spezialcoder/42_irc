@@ -231,6 +231,16 @@ public:
             return;
         }
         
+        // Handle MODE command (channel/user modes)
+        if (rawMsg.substr(0, 5) == "MODE ") {
+            std::string target = rawMsg.substr(5);
+            // Simple response: just say no modes are set
+            if (!target.empty() && target[0] == '#') {
+                srv_instance.sendTo(msg.getClient(), ":server 324 " + senderNick + " " + target + " +\r\n");
+            }
+            return;
+        }
+        
         // Handle CAP command (capability negotiation - just end it)
         if (rawMsg.substr(0, 4) == "CAP ") {
             std::string capCmd = rawMsg.substr(4);
@@ -253,6 +263,30 @@ public:
             }
             srv_instance.sendTo(msg.getClient(), ":server NOTICE " + senderNick + " :Goodbye!\r\n");
             srv_instance.disconnectClient(msg.getClient());
+            return;
+        }
+        
+        // Handle JOIN command
+        if (rawMsg.substr(0, 5) == "JOIN ") {
+            std::string channel = rawMsg.substr(5);
+            // Strip any leading colons
+            if (!channel.empty() && channel[0] == ':') {
+                channel = channel.substr(1);
+            }
+            std::cout << "[JOIN] " << senderNick << " joining " << channel << std::endl;
+            
+            // Send JOIN confirmation
+            srv_instance.sendTo(msg.getClient(), ":" + senderNick + " JOIN :" + channel + "\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 331 " + senderNick + " " + channel + " :No topic is set\r\n");
+            
+            // Send names list
+            std::string namesList = "";
+            for (const auto& [clientFd, nickname] : fdToNicknameMap) {
+                if (!namesList.empty()) namesList += " ";
+                namesList += nickname;
+            }
+            srv_instance.sendTo(msg.getClient(), ":server 353 " + senderNick + " = " + channel + " :" + namesList + "\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 366 " + senderNick + " " + channel + " :End of NAMES list\r\n");
             return;
         }
         
