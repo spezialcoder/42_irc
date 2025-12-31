@@ -57,27 +57,7 @@ public:
             // TODO: Validate password against expected password
             // For now, accept any password
             awaitingPassword[fd] = false;
-            
-            // Send welcome messages after authentication (001-004)
-            srv_instance.sendTo(msg.getClient(), ":server 001 " + senderNick + " :Welcome to the IRC Network " + senderNick + "\r\n");
-            srv_instance.sendTo(msg.getClient(), ":server 002 " + senderNick + " :Your host is server, running version 1.0\r\n");
-            srv_instance.sendTo(msg.getClient(), ":server 003 " + senderNick + " :This server was created today\r\n");
-            srv_instance.sendTo(msg.getClient(), ":server 004 " + senderNick + " :server 1.0 o o\r\n");
-            
-            // Auto-join to #general channel
-            srv_instance.sendTo(msg.getClient(), ":" + senderNick + " JOIN :#general\r\n");
-            // Send topic (332) or no topic (331)
-            srv_instance.sendTo(msg.getClient(), ":server 331 " + senderNick + " #general :No topic is set\r\n");
-            // Send names list for the channel (353 + 366)
-            std::string namesList = "";
-            for (const auto& [clientFd, nickname] : fdToNicknameMap) {
-                if (!namesList.empty()) namesList += " ";
-                namesList += nickname;
-            }
-            srv_instance.sendTo(msg.getClient(), ":server 353 " + senderNick + " = #general :" + namesList + "\r\n");
-            srv_instance.sendTo(msg.getClient(), ":server 366 " + senderNick + " #general :End of NAMES list\r\n");
-            
-            std::cout << "[AUTH] Client " << senderNick << " authenticated and joined #general" << std::endl;
+            std::cout << "[AUTH] Client " << senderNick << " authenticated with PASS" << std::endl;
             return;
         }
         
@@ -165,20 +145,45 @@ public:
             
             std::cout << "[USER] Client " << senderNick << " set username: " << username 
                       << ", realname: " << realname << std::endl;
+            
+            // Registration complete - send welcome messages (001-004)
+            srv_instance.sendTo(msg.getClient(), ":server 001 " + senderNick + " :Welcome to the IRC Network " + senderNick + "\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 002 " + senderNick + " :Your host is server, running version 1.0\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 003 " + senderNick + " :This server was created today\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 004 " + senderNick + " :server 1.0 o o\r\n");
+            
+            // Auto-join to #general channel
+            srv_instance.sendTo(msg.getClient(), ":" + senderNick + " JOIN :#general\r\n");
+            // Send topic (332) or no topic (331)
+            srv_instance.sendTo(msg.getClient(), ":server 331 " + senderNick + " #general :No topic is set\r\n");
+            // Send names list for the channel (353 + 366)
+            std::string namesList = "";
+            for (const auto& [clientFd, nickname] : fdToNicknameMap) {
+                if (!namesList.empty()) namesList += " ";
+                namesList += nickname;
+            }
+            srv_instance.sendTo(msg.getClient(), ":server 353 " + senderNick + " = #general :" + namesList + "\r\n");
+            srv_instance.sendTo(msg.getClient(), ":server 366 " + senderNick + " #general :End of NAMES list\r\n");
+            
+            std::cout << "[USER] Client " << senderNick << " registered and joined #general" << std::endl;
             return;
         }
         
         // Handle PING command (keepalive)
         if (rawMsg.substr(0, 5) == "PING ") {
             std::string token = rawMsg.substr(5);
-            std::cout << "[PING] Received PING with token: " << token << std::endl;
-            srv_instance.sendTo(msg.getClient(), "PONG server :" + token + "\r\n");
+            // Remove leading colon if present
+            if (!token.empty() && token[0] == ':') {
+                token = token.substr(1);
+            }
+            std::cout << "[PING] Received PING with token: '" << token << "' - Sending PONG" << std::endl;
+            srv_instance.sendTo(msg.getClient(), ":server PONG server :" + token + "\r\n");
             return;
         }
         
         if (rawMsg == "PING") {
-            std::cout << "[PING] Received PING without token" << std::endl;
-            srv_instance.sendTo(msg.getClient(), "PONG server\r\n");
+            std::cout << "[PING] Received PING without token - Sending PONG" << std::endl;
+            srv_instance.sendTo(msg.getClient(), ":server PONG server\r\n");
             return;
         }
         
