@@ -87,9 +87,33 @@ public:
                     // Broadcast to all other clients in channel
                     srv_instance.broadcastExcept(msg.getClient(), ":" + senderNick + " PRIVMSG " + target + " :" + content + "\r\n");
                 } else {
-                    // Private message to user
-                    // TODO: Find user by nickname and send
-                    srv_instance.sendTo(msg.getClient(), ":server NOTICE " + senderNick + " :Private messaging not yet implemented\r\n");
+                    // Private message to user - Step-by-step explanation:
+                    
+                    // Step 1: Look up the target nickname in our nicknameMap (nickname -> fd)
+                    auto it = nicknameMap.find(target);
+                    
+                    // Step 2: Check if user exists
+                    if (it == nicknameMap.end()) {
+                        // User not found - send IRC error 401 (No such nick/channel)
+                        srv_instance.sendTo(msg.getClient(), ":server 401 " + senderNick + " " + target + " :No such nick/channel\r\n");
+                        // Also send a visible NOTICE for better client visibility
+                        srv_instance.sendTo(msg.getClient(), ":server NOTICE " + senderNick + " :Cannot send to " + target + " (user not found)\r\n");
+                        std::cout << "[PRIVMSG] Failed: User '" << target << "' not found" << std::endl;
+                    } else {
+                        // Step 3: Get the target user's file descriptor
+                        int targetFd = it->second;
+                        std::cout << "[PRIVMSG] Found target '" << target << "' with FD: " << targetFd << std::endl;
+                        
+                        // Step 4: Get the Client object for the target
+                        // We'll use getClientByFd helper method
+                        Client targetClient = getClientByFd(targetFd);
+                        
+                        // Step 5: Format and send the private message
+                        std::string privmsg = ":" + senderNick + " PRIVMSG " + target + " :" + content + "\r\n";
+                        srv_instance.sendTo(targetClient, privmsg);
+                        
+                        std::cout << "[PRIVMSG] Sent from " << senderNick << " to " << target << ": " << content << std::endl;
+                    }
                 }
                 return;
             }
@@ -316,6 +340,14 @@ public:
     }
     
 private:
+    // Get Client object by file descriptor
+    // This constructs a Client from our stored data
+    Client getClientByFd(int fd) const {
+        // Create a dummy sockaddr_in - we only need the FD for sendTo to work
+        sockaddr_in dummy_addr{};
+        return Client(fd, dummy_addr);
+    }
+    
     // Validate nickname according to IRC standards
     bool isValidNick(const std::string& nick) const {
         if (nick.empty() || nick.size() > 32) return false;
