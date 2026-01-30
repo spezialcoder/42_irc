@@ -1,16 +1,18 @@
 #include <iostream>
 #include <chrono>
 #include <sstream>
-#include "server/include/mplexserver.h"
 #include <vector>
 #include <map>
 #include <set>
+
+#include "server/include/mplexserver.h"
+#include "server/include/UsrMgnt.h"
 
 using namespace MPlexServer;
 
 constexpr int PORT=6667;
 
-class UserManager : public EventHandler {
+/* class UserManager : public EventHandler {
 public:
     UserManager(Server& srv) : srv_instance(srv), nextGuestId(1) {}
 
@@ -421,10 +423,12 @@ private:
     std::map<int, std::string> realnameMap;  // fd -> realname (for USER command)
     std::set<int> registeredClients;  // Track which clients have completed registration
 };
+*/
 
 int main() {
-    Server srv(PORT);
-    UserManager um(srv);
+    Server  srv(PORT);
+    //UserManager um(srv);
+    UsrMgnt um(srv);
     srv.setEventHandler(&um);
     srv.setVerbose(1);  // 1: Reduce logging - only important messages 2: Debug info - verbose
     

@@ -1,23 +1,25 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   server.h                                           :+:      :+:    :+:   */
+/*   mplexserver.h                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: lsorg <lsorg@student.42heilbronn.de>       +#+  +:+       +#+        */
+/*   By: daspring <daspring@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2025/11/13 20:12:56 by lsorg            ###   ########.fr       */
+/*   Updated: 2026/01/30 16:38:47 by daspring         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+
 #include <arpa/inet.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <netinet/in.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <chrono>
 #include <functional>
 #include <iomanip>
@@ -47,7 +49,6 @@ namespace MPlexServer {
     };
 
     /**
-     *
      * @param fd File descriptor to be set non blocking.
      */
     void setNonBlocking(int fd);
@@ -66,14 +67,11 @@ namespace MPlexServer {
         [[nodiscard]] int getFd() const;
         [[nodiscard]] std::string getIpv4() const;
         [[nodiscard]] int getPort() const;
-        [[nodiscard]] std::string getNickname() const;
-        void setNickname(const std::string& nick);
 
         ~Client();
     private:
         int fd;
         sockaddr_in client_addr{};
-        std::string nickname;
     };
 
     /**
@@ -99,9 +97,11 @@ namespace MPlexServer {
         virtual void onDisconnect(Client client) = 0;
         virtual void onMessage(Message msg) = 0;
     };
+
     enum class EventType {CONNECTED, DISCONNECTED, MESSAGE};
+
     /**
-     * @bief Multiplexer Server class
+     * @brief Multiplexer Server class
      */
     class Server final {
     public:
@@ -193,12 +193,6 @@ namespace MPlexServer {
          * @param c Client to disconnect from.
          */
         void disconnectClient(const Client& c);
-
-        /**
-         * @brief Handles communication with a connected client.
-         * @param clientSocket The file descriptor of the client socket.
-         */
-        void handleClient(int clientSocket);
 
     private:
         int server_fd;

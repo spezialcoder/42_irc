@@ -2,22 +2,22 @@
 
 MPlexServer::Client::Client() {
     this->fd = -1;
-    this->nickname = "";
+    // this->nickname = "";
 }
 
-MPlexServer::Client::Client(const int fd, const sockaddr_in addr) : fd(fd), client_addr(addr), nickname("") {
+MPlexServer::Client::Client(const int fd, const sockaddr_in addr) : fd(fd), client_addr(addr) {
 }
 
 MPlexServer::Client::~Client() {
 }
 
-MPlexServer::Client::Client(const Client &other) : fd(other.fd), client_addr(other.client_addr), nickname(other.nickname) {
+MPlexServer::Client::Client(const Client &other) : fd(other.fd), client_addr(other.client_addr) {
 }
 
 MPlexServer::Client & MPlexServer::Client::operator=(const Client &other) {
     this->fd = other.fd;
     this->client_addr = other.client_addr;
-    this->nickname = other.nickname;
+    // this->nickname = other.nickname;
     return *this;
 }
 
@@ -35,10 +35,10 @@ int MPlexServer::Client::getPort() const {
     return ntohs(client_addr.sin_port);
 }
 
-std::string MPlexServer::Client::getNickname() const {
-    return this->nickname;
-}
+// std::string MPlexServer::Client::getNickname() const {
+//     return this->nickname;
+// }
 
-void MPlexServer::Client::setNickname(const std::string& nick) {
-    this->nickname = nick;
-}
+// void MPlexServer::Client::setNickname(const std::string& nick) {
+//     this->nickname = nick;
+// }
