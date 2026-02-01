@@ -1,5 +1,6 @@
 #include "../include/mplexserver.h"
 #include "../include/UsrMgnt.h"
+#include "../include/utils.h"
 
 using std::cout;
 using std::endl;
@@ -38,23 +39,15 @@ void    UsrMgnt::onDisconnect(MPlexServer::Client client) {
 }
 
 void    UsrMgnt::onMessage(MPlexServer::Message msg) {
-    cout << "[DEBUG] " << msg.getMessage() << " for "
-            // << msg.getClient().getFd() << msg.getClient().getIpv4() << msg.getClient().getPort()
-            << endl;
-    // srv_instance.sendTo(msg.getClient(), "001\r\n");
+    int fd = msg.getClient().getFd();
+    std::string rawMsg = msg.getMessage();
+    strip_trailing_rn(rawMsg);
+
+    cout << "[DEBUG] " << rawMsg << " for " << endl;
     // Send welcome messages (001-004)
     srv_instance.sendTo(msg.getClient(), ":server 001 :Welcome to the IRC Network\r\n");
     srv_instance.sendTo(msg.getClient(), ":server 002 :Your host is server, running version 1.0\r\n");
     srv_instance.sendTo(msg.getClient(), ":server 003 :This server was created today\r\n");
     srv_instance.sendTo(msg.getClient(), ":server 004 :server 1.0 o o\r\n");
 
-    // int fd = msg.getClient().getFd();
-    // std::string rawMsg = msg.getMessage();
-    // // Strip trailing \r\n for processing
-    // while (!rawMsg.empty() && (rawMsg.back() == '\r' || rawMsg.back() == '\n')) {
-    //     rawMsg.pop_back();
-    // }
-    
-    // Debug: Log ALL incoming commands
-    // std::cout << "[DEBUG] From " << ": '" << rawMsg << "'" << std::endl;
 }
