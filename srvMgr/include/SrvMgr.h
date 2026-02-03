@@ -1,24 +1,30 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "./mplexserver.h"
 
-// class Channel;
+class Channel;
 
 /**
  * @brief Class to manage users and their capabilities
 */
-class UsrMgnt : public MPlexServer::EventHandler {
+class SrvMgr : public MPlexServer::EventHandler {
 public:
-    UsrMgnt(MPlexServer::Server& srv);
+    SrvMgr(MPlexServer::Server& srv);
 
     void    onConnect(MPlexServer::Client client) override;
     void    onDisconnect(MPlexServer::Client client) override;
     void    onMessage(MPlexServer::Message msg) override;
+    
+    void    process_password(std::string, MPlexServer::Client);
+
+    void    add_user(User);
 
 private:
-    MPlexServer::Server& srv_instance;
+    MPlexServer::Server&    srv_instance_;
+    std::vector<User>       all_server_users_;
     
 };
 
@@ -32,8 +38,8 @@ public:
 private:
     std::string           nickname_;    
     std::string           username_;
-    bool                  is_authenticated_;
     MPlexServer::Client&  client_;
+    bool                  authenticated_;
     std::vector<Channel>  channels_;
 };
 
@@ -45,6 +51,15 @@ public:
     
 private:
     std::string         chan_name_;
-    std::vector<User>   all_users_;
+    std::vector<User>   all_channel_users_;
     std::vector<User>   operators_;
+};
+
+enum    msgType {
+    PASS,
+    CAP,
+    NICK,
+    USER,
+    JOIN,
+    PING,
 };

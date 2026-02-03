@@ -16,7 +16,7 @@ constexpr int PORT=6667;
 int main() {
     Server  srv(PORT);
     //UserManager um(srv);
-    UsrMgnt um(srv);
+    SrvMgr um(srv);
     srv.setEventHandler(&um);
     srv.setVerbose(1);  // 1: Reduce logging - only important messages 2: Debug info - verbose
     
