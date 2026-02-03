@@ -6,7 +6,7 @@
 #include <set>
 
 #include "server/include/mplexserver.h"
-#include "srvMgr/include/UsrMgnt.h"
+#include "srvMgr/include/SrvMgr.h"
 #include "srvMgr/include/utils.h"
 
 using namespace MPlexServer;

@@ -1,5 +1,5 @@
 #include "../../server/include/mplexserver.h"
-#include "../include/UsrMgnt.h"
+#include "../include/SrvMgr.h"
 #include "../include/utils.h"
 
 using std::cout;
