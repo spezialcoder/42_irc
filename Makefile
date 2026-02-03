@@ -5,7 +5,9 @@ LDFLAGS  :=
 RM       := rm -f
 RMDIR    := rm -rf
 
-SRCS     := main.cpp
+SRCS     := main.cpp \
+			./srvMgr/src/UsrMgnt.cpp \
+			./srvMgr/src/utils.cpp
 OBJS     := $(SRCS:.cpp=.o)
 
 SERVER_DIR := server

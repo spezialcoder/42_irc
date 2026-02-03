@@ -1,4 +1,4 @@
-#include "../include/mplexserver.h"
+#include "../../server/include/mplexserver.h"
 #include "../include/UsrMgnt.h"
 #include "../include/utils.h"
 
@@ -39,11 +39,11 @@ void    UsrMgnt::onDisconnect(MPlexServer::Client client) {
 }
 
 void    UsrMgnt::onMessage(MPlexServer::Message msg) {
-    int fd = msg.getClient().getFd();
+    // int fd = msg.getClient().getFd();
     std::string rawMsg = msg.getMessage();
     strip_trailing_rn(rawMsg);
 
-    cout << "[DEBUG] " << rawMsg << " for " << endl;
+    cout << "[DEBUG] " << rawMsg << endl;
     // Send welcome messages (001-004)
     srv_instance.sendTo(msg.getClient(), ":server 001 :Welcome to the IRC Network\r\n");
     srv_instance.sendTo(msg.getClient(), ":server 002 :Your host is server, running version 1.0\r\n");
