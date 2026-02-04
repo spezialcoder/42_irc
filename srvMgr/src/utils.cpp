@@ -26,7 +26,7 @@ int     get_msg_type(std::string& s) {
     // size_t  idx = s.find_first_of(' ');
     // std::cout << s.substr(0, idx) << std::endl;
     if (s == "PASS") {
-        return PASS;
+        return MsgType::PASS;
     }
     else {
         return -1;

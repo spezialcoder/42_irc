@@ -2,9 +2,8 @@
 #include <iomanip>
 #include <sstream>
 
-MPlexServer::Server::Server(uint16_t port, const std::string ipv4, const std::string password)
-    : port(port == 0 ? 6667 : port), ipv4(ipv4), password(password.empty() ? "DaLeMa26" : password) {
-    // Default port is 6667 and default PW is DaLeMa26 if not specified
+MPlexServer::Server::Server(uint16_t port, const std::string ipv4)
+    : port(port == 0 ? 6667 : port), ipv4(ipv4) {
     this->verbose = 0;
     this->server_fd = -1;
     this->epollfd = -1;
@@ -325,7 +324,7 @@ void MPlexServer::Server::broadcastExcept(const Client& except, std::string mess
 }
 
 void MPlexServer::Server::disconnectClient(const Client &c) {
-    close(c.getFd());
+    // close(c.getFd());                // get closed later in deleteClient()
     deleteClient(c.getFd());
 }
 

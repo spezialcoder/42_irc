@@ -6,7 +6,7 @@
 /*   By: daspring <daspring@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/10 18:57:28 by lsorg             #+#    #+#             */
-/*   Updated: 2026/01/30 16:38:47 by daspring         ###   ########.fr       */
+/*   Updated: 2026/02/04 20:42:33 by daspring         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -115,7 +115,7 @@ namespace MPlexServer {
          * @param ipv4 Specifies the ipv4 address the server should bind to. (Default value binds to all available network interfaces)
          * @param password Specifies the server password. (Default: "DaLeMa26")
          */
-        explicit Server(uint16_t port = 6667, std::string ipv4 = "", std::string password = "DaLeMa26");
+        explicit Server(uint16_t port = 6667, std::string ipv4 = "");
 
         ~Server();
 
@@ -201,7 +201,6 @@ namespace MPlexServer {
         int verbose;
         int epollfd;
         int clientCount;
-        std::string password; // Server password
         std::unordered_map<int, Client> client_map;
         std::unordered_map<int, std::string> send_buffer;
         std::unordered_map<int, std::string> recv_buffer;

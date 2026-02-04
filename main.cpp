@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <string>
 
 #include "server/include/mplexserver.h"
 #include "srvMgr/include/SrvMgr.h"
@@ -11,12 +12,13 @@
 
 using namespace MPlexServer;
 
-constexpr int PORT=6667;
+constexpr int   PORT = 6667;
+std::string     SERVER_PASSWORD = "abc";
 
 int main() {
     Server  srv(PORT);
     //UserManager um(srv);
-    SrvMgr um(srv);
+    SrvMgr um(srv, SERVER_PASSWORD);
     srv.setEventHandler(&um);
     srv.setVerbose(1);  // 1: Reduce logging - only important messages 2: Debug info - verbose
     
