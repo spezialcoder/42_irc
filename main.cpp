@@ -13,13 +13,14 @@
 using namespace MPlexServer;
 
 constexpr int   PORT = 6667;
-std::string     SERVER_PASSWORD = "abc";
+constexpr auto SERVER_PASSWORD = "abc";
+constexpr auto SERVER_NAME = "irc.LeMaDa.hn";
 
 int main() {
     Server  srv(PORT);
     //UserManager um(srv);
-    SrvMgr um(srv, SERVER_PASSWORD);
-    srv.setEventHandler(&um);
+    SrvMgr sm(srv, SERVER_PASSWORD, SERVER_NAME);
+    srv.setEventHandler(&sm);
     srv.setVerbose(1);  // 1: Reduce logging - only important messages 2: Debug info - verbose
     
     try {

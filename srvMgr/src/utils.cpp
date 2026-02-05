@@ -23,12 +23,30 @@ std::vector<std::string>    process_message(std::string s) {
 }
 
 int     get_msg_type(std::string& s) {
-    // size_t  idx = s.find_first_of(' ');
-    // std::cout << s.substr(0, idx) << std::endl;
     if (s == "PASS") {
-        return MsgType::PASS;
+        return cmdType::PASS;
+    } else if (s == "CAP") {
+        return cmdType::CAP;
+    } else if (s == "NICK") {
+        return cmdType::NICK;
+    } else if (s == "USER") {
+        return cmdType::USER;
+    } else if (s == "JOIN") {
+        return cmdType::JOIN;
+    } else if (s == "PRIVMSG") {
+        return cmdType::PRIVMSG;
+    } else if (s == "NOTICE") {
+        return cmdType::NOTICE;
+    } else if (s == "MODE") {
+        return cmdType::MODE;
+    } else if (s == "INVITE") {
+        return cmdType::INVITE;
+    } else if (s == "KICK") {
+        return cmdType::KICK;
+    } else if (s == "PING") {
+        return cmdType::PING;
     }
     else {
-        return -1;
+        return cmdType::NO_TYPE_FOUND;
     }
 }

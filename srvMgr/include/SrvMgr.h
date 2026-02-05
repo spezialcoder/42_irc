@@ -15,7 +15,7 @@ class   User;
 */
 class SrvMgr : public MPlexServer::EventHandler {
 public:
-    SrvMgr(MPlexServer::Server&, std::string);
+    SrvMgr(MPlexServer::Server&, std::string server_password, std::string server_name);
 
     void    onConnect(MPlexServer::Client client) override;
     void    onDisconnect(MPlexServer::Client client) override;
@@ -25,11 +25,13 @@ public:
     void    process_cap(std::string, MPlexServer::Client);
     void    process_nick(std::string, MPlexServer::Client);
     void    process_user(std::string, MPlexServer::Client);
+    void    pong(std::string, MPlexServer::Client);
 
 
 private:
     MPlexServer::Server&            srv_instance_;
     std::string                     server_password_; // Server password
+    std::string                     server_name_;
     std::map<int, User>             server_users_;
     std::unordered_set<std::string> server_nicks;
 };
@@ -68,11 +70,17 @@ private:
     std::vector<User>   operators_;
 };
 
-enum    MsgType {
+enum    cmdType {
     PASS,
     CAP,
     NICK,
     USER,
     JOIN,
+    PRIVMSG,
+    NOTICE,
+    MODE,
+    INVITE,
+    KICK,
     PING,
+    NO_TYPE_FOUND
 };
