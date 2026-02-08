@@ -324,7 +324,7 @@ void MPlexServer::Server::broadcastExcept(const Client& except, std::string mess
 }
 
 void MPlexServer::Server::disconnectClient(const Client &c) {
-    // close(c.getFd());                // get closed later in deleteClient()
+    // should/must flush socket before closing socket!!
     deleteClient(c.getFd());
 }
 

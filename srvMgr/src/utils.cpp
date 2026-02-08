@@ -11,10 +11,11 @@ void    strip_trailing_rn(std::string& s) {
 }
 
 std::vector<std::string>    process_message(std::string s) {
-    size_t                      idx;
     std::vector<std::string>    msg_parts;
 
     strip_trailing_rn(s);
+
+    size_t                      idx;
     idx = s.find_first_of(' ');
     msg_parts.push_back(s.substr(0, idx));
     msg_parts.push_back(s.substr(idx + 1, s.length() - idx));
@@ -43,6 +44,8 @@ int     get_msg_type(std::string& s) {
         return cmdType::INVITE;
     } else if (s == "KICK") {
         return cmdType::KICK;
+    } else if (s == "QUIT") {
+        return cmdType::QUIT;
     } else if (s == "PING") {
         return cmdType::PING;
     }

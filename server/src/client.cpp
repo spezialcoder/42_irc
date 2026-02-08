@@ -17,7 +17,6 @@ MPlexServer::Client::Client(const Client &other) : fd(other.fd), client_addr(oth
 MPlexServer::Client & MPlexServer::Client::operator=(const Client &other) {
     this->fd = other.fd;
     this->client_addr = other.client_addr;
-    // this->nickname = other.nickname;
     return *this;
 }
 
@@ -34,11 +33,3 @@ std::string MPlexServer::Client::getIpv4() const {
 int MPlexServer::Client::getPort() const {
     return ntohs(client_addr.sin_port);
 }
-
-// std::string MPlexServer::Client::getNickname() const {
-//     return this->nickname;
-// }
-
-// void MPlexServer::Client::setNickname(const std::string& nick) {
-//     this->nickname = nick;
-// }

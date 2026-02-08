@@ -15,22 +15,26 @@ class   User;
 */
 class SrvMgr : public MPlexServer::EventHandler {
 public:
-    SrvMgr(MPlexServer::Server&, std::string server_password, std::string server_name);
+    SrvMgr() = delete;
+    SrvMgr(MPlexServer::Server&, const std::string& server_password, const std::string& server_name);
+    ~SrvMgr() = default;
 
     void    onConnect(MPlexServer::Client client) override;
     void    onDisconnect(MPlexServer::Client client) override;
     void    onMessage(MPlexServer::Message msg) override;
+
+    void    try_to_log_in(User& user, const MPlexServer::Client& client) const;
     
-    void    process_password(std::string, MPlexServer::Client);
-    void    process_cap(std::string, MPlexServer::Client);
-    void    process_nick(std::string, MPlexServer::Client);
-    void    process_user(std::string, MPlexServer::Client);
-    void    pong(std::string, MPlexServer::Client);
+    void    process_password(const std::string&, const MPlexServer::Client&, User&) const;
+    void    process_cap(const std::string&, const MPlexServer::Client&, User&) const;
+    void    process_nick(const std::string&, const MPlexServer::Client&, User&);
+    void    process_user(std::string, const MPlexServer::Client&, User&);
+    void    pong(const std::string &, const MPlexServer::Client &, const User&);
 
 
 private:
     MPlexServer::Server&            srv_instance_;
-    std::string                     server_password_; // Server password
+    std::string                     server_password_;
     std::string                     server_name_;
     std::map<int, User>             server_users_;
     std::unordered_set<std::string> server_nicks;
@@ -39,23 +43,40 @@ private:
 class User
 {
 public:
-    User();
-    User(MPlexServer::Client);
-    ~User();
+    User() = default;
+    User(const User& other) = default;
+    User(MPlexServer::Client&);
+    ~User() = default;
+
+    User& operator=(const User& other) = default;
+
 
     bool        is_authenticated();
     void        set_authentication(bool);
     void        set_nickname(std::string);
-    std::string get_nickname();
+    std::string get_nickname() const;
     void        set_username(std::string);
     std::string get_username();
+    void        set_hostname(std::string);
+    std::string get_hostname();
+
+    [[nodiscard]] bool  is_logged_in() const;
+    void                set_as_logged_in(bool is_logged_in);
+    [[nodiscard]] bool  password_provided() const;
+    void                set_password_provided(bool password_provided);
+    [[nodiscard]] bool  cap_negotiation_ended() const;
+    void                set_cap_negotiation_ended(bool cap_negotiation_ended);
 
 private:
-    MPlexServer::Client   client_; 
-    bool                  authenticated_;
-    std::string           nickname_;    
-    std::string           username_;
-    std::vector<Channel>  channels_;
+    MPlexServer::Client     client_{};
+    bool                    is_logged_in_ = false;
+    bool                    password_provided_ = false;
+    bool                    cap_negotiation_ended_ = false;
+    bool                    authenticated_ = false;
+    std::string             nickname_{};
+    std::string             username_{};
+    std::string             hostname_{};
+    std::vector<Channel>    channels_{};
 };
 
 class Channel
@@ -81,6 +102,7 @@ enum    cmdType {
     MODE,
     INVITE,
     KICK,
+    QUIT,
     PING,
     NO_TYPE_FOUND
 };
