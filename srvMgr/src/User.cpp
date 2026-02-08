@@ -48,3 +48,9 @@ void        User::set_username(std::string username) {
 std::string User::get_username() {
     return username_;
 }
+void        User::set_hostname(std::string hostname) {
+    hostname_ = hostname;
+}
+std::string User::get_hostname() {
+    return hostname_;
+}
