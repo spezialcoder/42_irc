@@ -88,7 +88,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
 
 }
 
-void SrvMgr::try_to_log_in(User &user, const MPlexServer::Client &client) const {
+void    SrvMgr::try_to_log_in(User &user, const MPlexServer::Client &client) const {
     if (user.get_nickname().empty() || user.get_username().empty() ||
         !user.password_provided() || !user.cap_negotiation_ended()) {
         return ;
@@ -104,11 +104,16 @@ void SrvMgr::try_to_log_in(User &user, const MPlexServer::Client &client) const 
 
 
 void    SrvMgr::process_password(const std::string& provided_password, const MPlexServer::Client& client, User& user) const {
+    if (user.is_logged_in()) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ALREADYREGISTERED + " " + user.get_nickname() + " " + ":You may not reregister\r\n");
+        return ;
+    }
     if (provided_password == server_password_) {
         user.set_password_provided(true);
     }
     else {
         srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_PASSWDMISMATCH + " * " + ":Password incorrect\r\n");
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered\r\n");
         srv_instance_.sendTo(client, "ERROR :Closing Link: " + client.getIpv4() + " (Password incorrect)\r\n");
         srv_instance_.disconnectClient(client);
         return ;
@@ -131,26 +136,43 @@ void    SrvMgr::process_cap(const string& s, const MPlexServer::Client& client, 
 }
 
 void    SrvMgr::process_nick(const string& s, const MPlexServer::Client& client, User& user) {
+    if (s.find_first_of("#:; ") != s.npos) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + user.get_nickname() + " " + s + ":Erroneus nickname\r\n");
+        return ;
+    }
     if (server_nicks.find(s) == server_nicks.end()) {
+        if (!(user.get_nickname() == "*")) {
+            server_nicks.erase(user.get_nickname());
+        }
         server_nicks.emplace(s);
         user.set_nickname(s);
     }
     else {
-        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NICKNAMEINUSE + " * " + s + ":Nickname already exists\r\n");
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NICKNAMEINUSE + " " + user.get_nickname() + " " + s + ":Nickname is already in use\r\n");
     }
     if (!user.is_logged_in()) {
         try_to_log_in(user ,client);
     }
 }
 
-void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& user) {
+void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& user) const {
     size_t     idx;
+
+    if (user.is_logged_in()) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ALREADYREGISTERED + " " + user.get_nickname() + " " + ":You may not reregister\r\n");
+        return ;
+    }
 
     idx = s.find_first_of(' ');
     string  username = s.substr(0, idx);
     s = s.substr(idx + 1, s.length() - idx);
     idx = s.find_first_of(' ');
     string  hostname = s.substr(0, idx);
+
+    if (username.empty() || hostname.empty()) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " * " + ":Not enough parameters for user registration\r\n");
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered\r\n");
+    }
 
     user.set_username(username);
     user.set_username(hostname);
@@ -160,8 +182,11 @@ void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& 
     if (!user.is_logged_in()) {
         try_to_log_in(user ,client);
     }
+
+    // after CAP, NICK and USER
     if (!user.password_provided()) {
         srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_PASSWDMISMATCH + " * " + ":Password incorrect\r\n");
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered\r\n");
         srv_instance_.sendTo(client, "ERROR :Closing Link: " + client.getIpv4() + " (Password incorrect)\r\n");
         srv_instance_.disconnectClient(client);
     }

@@ -162,9 +162,10 @@ void MPlexServer::Server::recv_from_fd(const int fd) {
     if (r_buffer.find("\r\n") != std::string::npos) {
         std::string msg = r_buffer.substr(0,r_buffer.find("\r\n")+1);
         r_buffer.erase(0,r_buffer.find("\r\n")+2);
+        log(buffer,2);
         callHandler(EventType::MESSAGE,client_map[fd],Message(msg,client_map[fd]));
     }
-    log(buffer,2);
+    // log(buffer,2);
 }
 
 void MPlexServer::Server::send_to_fd(int fd) {
@@ -280,6 +281,7 @@ void MPlexServer::Server::deleteClient(const int fd) {
     if (client_map.find(fd) == client_map.end())
         return;
     callHandler(EventType::DISCONNECTED,client_map[fd]);
+
     client_map.erase(fd);
     clientCount--;
     send_buffer.erase(fd);

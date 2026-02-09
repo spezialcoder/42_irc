@@ -21,7 +21,7 @@ int main() {
     //UserManager um(srv);
     SrvMgr sm(srv, SERVER_PASSWORD, SERVER_NAME);
     srv.setEventHandler(&sm);
-    srv.setVerbose(1);  // 1: Reduce logging - only important messages 2: Debug info - verbose
+    srv.setVerbose(2);  // 1: Reduce logging - only important messages 2: Debug info - verbose
     
     try {
         srv.activate();

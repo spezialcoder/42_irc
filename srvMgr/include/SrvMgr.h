@@ -28,14 +28,14 @@ public:
     void    process_password(const std::string&, const MPlexServer::Client&, User&) const;
     void    process_cap(const std::string&, const MPlexServer::Client&, User&) const;
     void    process_nick(const std::string&, const MPlexServer::Client&, User&);
-    void    process_user(std::string, const MPlexServer::Client&, User&);
+    void    process_user(std::string, const MPlexServer::Client&, User&) const;
     void    pong(const std::string &, const MPlexServer::Client &, const User&);
 
 
 private:
     MPlexServer::Server&            srv_instance_;
-    std::string                     server_password_;
-    std::string                     server_name_;
+    const std::string               server_password_;
+    const std::string               server_name_;
     std::map<int, User>             server_users_;
     std::unordered_set<std::string> server_nicks;
 };
@@ -73,7 +73,7 @@ private:
     bool                    password_provided_ = false;
     bool                    cap_negotiation_ended_ = false;
     bool                    authenticated_ = false;
-    std::string             nickname_{};
+    std::string             nickname_{"*"};
     std::string             username_{};
     std::string             hostname_{};
     std::vector<Channel>    channels_{};
