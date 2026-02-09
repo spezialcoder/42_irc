@@ -2,9 +2,8 @@
 #include <iomanip>
 #include <sstream>
 
-MPlexServer::Server::Server(uint16_t port, const std::string ipv4, const std::string password)
-    : port(port == 0 ? 6667 : port), ipv4(ipv4), password(password.empty() ? "DaLeMa26" : password) {
-    // Default port is 6667 and default PW is DaLeMa26 if not specified
+MPlexServer::Server::Server(uint16_t port, const std::string ipv4)
+    : port(port == 0 ? 6667 : port), ipv4(ipv4) {
     this->verbose = 0;
     this->server_fd = -1;
     this->epollfd = -1;
@@ -163,9 +162,10 @@ void MPlexServer::Server::recv_from_fd(const int fd) {
     if (r_buffer.find("\r\n") != std::string::npos) {
         std::string msg = r_buffer.substr(0,r_buffer.find("\r\n")+1);
         r_buffer.erase(0,r_buffer.find("\r\n")+2);
+        log(buffer,2);
         callHandler(EventType::MESSAGE,client_map[fd],Message(msg,client_map[fd]));
     }
-    log(buffer,2);
+    // log(buffer,2);
 }
 
 void MPlexServer::Server::send_to_fd(int fd) {
@@ -207,7 +207,7 @@ void MPlexServer::Server::accept_client() {
     sockaddr_in client_addr{};
     socklen_t len = sizeof(client_addr);
     const int clientFd = accept(server_fd, reinterpret_cast<sockaddr *>(&client_addr),&len);
-    len = sizeof(client_addr);
+    len = sizeof(client_addr);              // unneccessary? two lines up already done
     try {
         setNonBlocking(clientFd);
     } catch (std::runtime_error &e) {
@@ -234,7 +234,7 @@ void MPlexServer::Server::poll() {
     epoll_event events[MAX_EPOLL_EVENTS];
     int numEvents = 0;
     while (true) {
-        numEvents = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, 0);
+        numEvents = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, 0); // timeout (in ms) of 0 return immediately (potentially negating the use of poll?)
         if (numEvents == EAGAIN) {
             continue;
         }
@@ -250,7 +250,7 @@ void MPlexServer::Server::poll() {
             accept_client();
         } else {
             if (events[i].events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
-                log("Client disconnected.",1);
+                log("Client disconnected.", 1);
                 deleteClient(events[i].data.fd);
                 continue;
             }
@@ -281,6 +281,7 @@ void MPlexServer::Server::deleteClient(const int fd) {
     if (client_map.find(fd) == client_map.end())
         return;
     callHandler(EventType::DISCONNECTED,client_map[fd]);
+
     client_map.erase(fd);
     clientCount--;
     send_buffer.erase(fd);
@@ -325,7 +326,7 @@ void MPlexServer::Server::broadcastExcept(const Client& except, std::string mess
 }
 
 void MPlexServer::Server::disconnectClient(const Client &c) {
-    close(c.getFd());
+    // should/must flush socket before closing socket!!
     deleteClient(c.getFd());
 }
 
@@ -333,27 +334,4 @@ void MPlexServer::Server::multisend(const std::vector<Client> &clients, std::str
     for (const auto&c : clients) {
         sendTo(c, message);
     }
-}
-
-void MPlexServer::Server::handleClient(int clientSocket) {
-    char buffer[1024];
-    ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
-    if (bytesRead <= 0) {
-        log("Failed to read password or client disconnected.", 1);
-        close(clientSocket);
-        return;
-    }
-
-    buffer[bytesRead] = '\0'; // Null-terminate the received data
-    std::string receivedPassword(buffer);
-    receivedPassword.erase(receivedPassword.find_last_not_of("\r\n") + 1);
-
-    if (receivedPassword != password) {  // Compare plain-text passwords
-        log("Client provided incorrect password. Disconnecting.", 1);
-        close(clientSocket);
-        return;
-    }
-
-    log("Client authenticated successfully.", 1);
-    // Proceed with further client handling...
 }

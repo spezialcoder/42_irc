@@ -11,3 +11,7 @@ ircserv
 irc_client_proper.py
 irc_client.py
 irc_client.sh
+
+# misc
+.vscode
+.idea*
