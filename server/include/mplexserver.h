@@ -204,10 +204,11 @@ namespace MPlexServer {
         std::unordered_map<int, Client> client_map;
         std::unordered_map<int, std::string> send_buffer;
         std::unordered_map<int, std::string> recv_buffer;
+        std::vector<int> disconnect_queue;
         EventHandler* handler;
 
         void log(std::string message, int required_level) const;
-        void deleteClient(int fd);
+        void deleteClient(const int fd);
         void callHandler(EventType event, Client client, Message msg=Message()) const;
         void modifyEpollFlags(int fd, int flags);
         void recv_from_fd(int fd);

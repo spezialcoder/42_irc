@@ -265,6 +265,11 @@ void MPlexServer::Server::poll() {
                 send_to_fd(events[i].data.fd);
             }
         }
+        if (std::find(disconnect_queue.begin(), disconnect_queue.end(), events[i].data.fd) != disconnect_queue.end() &&
+            send_buffer.find(events[i].data.fd) == send_buffer.end()) {
+            disconnect_queue.erase(std::find(disconnect_queue.begin(), disconnect_queue.end(), events[i].data.fd));
+            deleteClient(events[i].data.fd);
+        }
     }
 }
 
@@ -277,11 +282,15 @@ void MPlexServer::Server::modifyEpollFlags(const int fd, const int flags) {
     }
 }
 
-void MPlexServer::Server::deleteClient(const int fd) {
-    if (client_map.find(fd) == client_map.end())
+void MPlexServer::Server::disconnectClient(const Client& c) {
+    if (client_map.find(c.getFd()) == client_map.end())
         return;
-    callHandler(EventType::DISCONNECTED,client_map[fd]);
+    callHandler(EventType::DISCONNECTED,client_map[c.getFd()]);
+    disconnect_queue.push_back(c.getFd());
+}
 
+void MPlexServer::Server::deleteClient(const int fd) {
+    shutdown(fd,SHUT_WR);
     client_map.erase(fd);
     clientCount--;
     send_buffer.erase(fd);
@@ -323,11 +332,6 @@ void MPlexServer::Server::broadcastExcept(const Client& except, std::string mess
             sendTo(c, message);
         }
     }
-}
-
-void MPlexServer::Server::disconnectClient(const Client &c) {
-    // should/must flush socket before closing socket!!
-    deleteClient(c.getFd());
 }
 
 void MPlexServer::Server::multisend(const std::vector<Client> &clients, std::string message) {
