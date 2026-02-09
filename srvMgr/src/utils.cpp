@@ -34,6 +34,8 @@ int     get_msg_type(std::string& s) {
         return cmdType::USER;
     } else if (s == "JOIN") {
         return cmdType::JOIN;
+    } else if (s == "PART") {
+        return cmdType::PART;
     } else if (s == "PRIVMSG") {
         return cmdType::PRIVMSG;
     } else if (s == "NOTICE") {

@@ -11,7 +11,7 @@ using std::string;
 
 SrvMgr::SrvMgr(MPlexServer::Server& srv, const string& server_password, const string& server_name) : srv_instance_(srv), server_password_(server_password), server_name_(server_name) {
     // server_nicks.emplace("user");
-    server_nicks.emplace("dnlspr");
+    server_nicks_.emplace("dnlspr");
 }
 
 void    SrvMgr::onConnect(MPlexServer::Client client) {
@@ -24,7 +24,7 @@ void    SrvMgr::onDisconnect(MPlexServer::Client client) {
     std::string nick = user.get_nickname();
     cout << "[DISCONNECT] " << nick << " (" << client.getIpv4() << ":" << client.getPort() << ") left" << endl;
     server_users_.erase(client.getFd());
-    server_nicks.erase(nick);
+    server_nicks_.erase(nick);
 
     // Broadcast QUIT message in IRC format
     srv_instance_.broadcast(":" + nick + " QUIT :Client disconnected\r\n");
@@ -67,6 +67,8 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             break;
         case cmdType::JOIN:
             break;
+        case cmdType::PART:
+            break;
         case cmdType::PRIVMSG:
             break;
         case cmdType::NOTICE:
@@ -94,14 +96,12 @@ void    SrvMgr::try_to_log_in(User &user, const MPlexServer::Client &client) con
         return ;
     }
     user.set_as_logged_in(true);
-    // Send welcome messages (001-004)
     const string nick = user.get_nickname();
     srv_instance_.sendTo(client, ":" + nick + " " + RPL_WELCOME + " :Welcome to our single-server IRC 'network'.\r\n"); // wrong format, so it does not get displayed
     srv_instance_.sendTo(client, ":" + nick + " " + RPL_YOURHOST + " :Your host is " + server_name_ + ", running version 1.0.\r\n");
     srv_instance_.sendTo(client, ":" + nick + " " + RPL_CREATED + " :This server was created today.\r\n");
     srv_instance_.sendTo(client, ":" + nick + " " + RPL_MYINFO + " :server 1.0 o o\r\n");
 }
-
 
 void    SrvMgr::process_password(const std::string& provided_password, const MPlexServer::Client& client, User& user) const {
     if (user.is_logged_in()) {
@@ -137,14 +137,14 @@ void    SrvMgr::process_cap(const string& s, const MPlexServer::Client& client, 
 
 void    SrvMgr::process_nick(const string& s, const MPlexServer::Client& client, User& user) {
     if (s.find_first_of("#:; ") != s.npos) {
-        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + user.get_nickname() + " " + s + ":Erroneus nickname\r\n");
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + user.get_nickname() + " " + s + ":Erroneus nickname, it may not contain \"#:; \"\r\n");
         return ;
     }
-    if (server_nicks.find(s) == server_nicks.end()) {
-        if (!(user.get_nickname() == "*")) {
-            server_nicks.erase(user.get_nickname());
+    if (server_nicks_.find(s) == server_nicks_.end()) {
+        if (!(user.get_nickname().empty())) {
+            server_nicks_.erase(user.get_nickname());
         }
-        server_nicks.emplace(s);
+        server_nicks_.emplace(s);
         user.set_nickname(s);
     }
     else {
@@ -172,6 +172,7 @@ void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& 
     if (username.empty() || hostname.empty()) {
         srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " * " + ":Not enough parameters for user registration\r\n");
         srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered\r\n");
+        return ;
     }
 
     user.set_username(username);
@@ -183,7 +184,7 @@ void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& 
         try_to_log_in(user ,client);
     }
 
-    // after CAP, NICK and USER
+    // if no password was provided after CAP, NICK and USER registration fails and we terminate
     if (!user.password_provided()) {
         srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_PASSWDMISMATCH + " * " + ":Password incorrect\r\n");
         srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered\r\n");
@@ -191,6 +192,14 @@ void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& 
         srv_instance_.disconnectClient(client);
     }
 }
+
+// void    SrvMgr::join_channel(string s, const MPlexServer::Client& client, User& user) {
+//     string chan_name = s;
+//     if (server_channels_.find(chan_name) == server_channels_.end()) {
+//
+//     }
+// }
+
 
 void    SrvMgr::pong(const string &s, const MPlexServer::Client &client, const User&) {
     string nick = server_users_[client.getFd()].get_nickname();
