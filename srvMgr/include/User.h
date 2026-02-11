@@ -18,16 +18,14 @@ public:
 
     User& operator=(const User& other) = default;
 
-
-    bool        is_authenticated();
-    void        set_authentication(bool);
-    void        set_nickname(std::string);
-    std::string get_nickname() const;
-    void        set_username(std::string);
-    std::string get_username();
-    void        set_hostname(std::string);
-    std::string get_hostname();
-    std::string get_signature() const;
+    MPlexServer::Client get_client() const;
+    void                    set_nickname(std::string);
+    std::string             get_nickname() const;
+    void                    set_username(std::string);
+    std::string             get_username();
+    void                    set_hostname(std::string);
+    std::string             get_hostname();
+    std::string             get_signature() const;
 
     [[nodiscard]] bool  is_logged_in() const;
     void                set_as_logged_in(bool is_logged_in);

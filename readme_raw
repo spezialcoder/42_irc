@@ -11,6 +11,8 @@ nc -C <address> <port>
 
 /set irc.server.moniker.nicks new_nick
 
+/mouse enable
+/close                                              - alias to /buffer close
 
 resources:
 https://modern.ircdocs.horse/

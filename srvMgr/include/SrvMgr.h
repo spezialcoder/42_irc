@@ -35,6 +35,8 @@ public:
 	void    send_channel_greetings(Channel&, const MPlexServer::Client&,const User&);
     void    process_quit(std::string, const MPlexServer::Client&, User&);
     void    pong(const std::string &, const MPlexServer::Client &, const User&);
+    void    send_to_channel(const Channel& channel, const std::string& msg, const std::string& origin_nick) const;
+    auto    create_client_vector(const std::unordered_set<std::string>& set_of_nicks) const;
 
 
 private:

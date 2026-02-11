@@ -29,6 +29,10 @@ void User::set_cap_negotiation_ended(bool cap_negotiation_ended) {
     cap_negotiation_ended_ = cap_negotiation_ended;
 }
 
+MPlexServer::Client User::get_client() const {
+    return client_;
+}
+
 void        User::set_nickname(std::string nickname) {
     nickname_ = nickname;
 }

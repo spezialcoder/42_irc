@@ -16,13 +16,18 @@ public:
 
     Channel&    operator=(const Channel& other) = default;
 
-    std::string get_channel_name();
-    std::string get_channel_topic();
-    std::string get_all_user_nicks();
+    std::string                     get_channel_name();
+    std::string                     get_channel_topic();
+    std::string                     get_user_nicks_str();
+    std::unordered_set<std::string> get_chan_nicks() const;
+    void                            add_operator(std::string);
+    int                             remove_operator(std::string);
+    void                            add_nick(std::string);
+    int                             remove_nick(std::string);
 
 private:
     std::string                     chan_name_;
     std::string                     topic_{};
-    std::unordered_set<std::string> all_channel_users_;
-    std::unordered_set<std::string> operators_;
+    std::unordered_set<std::string> chan_nicks_;
+    std::unordered_set<std::string> chan_ops_;
 };
