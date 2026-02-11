@@ -193,6 +193,7 @@ namespace MPlexServer {
          * @param c Client to disconnect from.
          */
         void disconnectClient(const Client& c);
+        void disconnectClient(int fd);
 
     private:
         int server_fd;

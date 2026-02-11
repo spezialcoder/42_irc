@@ -133,7 +133,7 @@ void MPlexServer::Server::recv_from_fd(const int fd) {
     const ssize_t n = recv(fd, buffer, MAX_MSG_LEN,0);
     if (n == 0) {
         log("Client disconnected (EOF)", 1);
-        deleteClient(fd);
+        disconnectClient(fd);
         return;
     }
     if (n < 0) {
@@ -142,15 +142,15 @@ void MPlexServer::Server::recv_from_fd(const int fd) {
                 break;
             case ECONNRESET:
                 log("Connection of client has been reset",1);
-                deleteClient(fd);
+                disconnectClient(fd);
                 break;
             case ETIMEDOUT:
                 log("Client has timed out",1);
-                deleteClient(fd);
+                disconnectClient(fd);
                 break;
             default:
                 log("Unkown error occured while reading from client",1);
-                deleteClient(fd);
+                disconnectClient(fd);
                 break;
 
         }
@@ -188,12 +188,12 @@ void MPlexServer::Server::send_to_fd(int fd) {
     } 
     else if (sent == 0) {
         log("Send returned 0, connection closed", 1);
-        deleteClient(fd);
+        disconnectClient(fd);
         return;
     }
     else {
         log("Unknown error occurred while sending to client, errno: " + std::to_string(errno), 0);
-        deleteClient(fd);
+        disconnectClient(fd);
         return;
     }
     
@@ -251,7 +251,7 @@ void MPlexServer::Server::poll() {
         } else {
             if (events[i].events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
                 log("Client disconnected.", 1);
-                deleteClient(events[i].data.fd);
+                disconnectClient(events[i].data.fd);
                 continue;
             }
             if (events[i].events & EPOLLIN) {
@@ -265,12 +265,11 @@ void MPlexServer::Server::poll() {
                 send_to_fd(events[i].data.fd);
             }
         }
-        if (std::find(disconnect_queue.begin(), disconnect_queue.end(), events[i].data.fd) != disconnect_queue.end() &&
-            send_buffer.find(events[i].data.fd) == send_buffer.end()) {
-            disconnect_queue.erase(std::find(disconnect_queue.begin(), disconnect_queue.end(), events[i].data.fd));
-            deleteClient(events[i].data.fd);
-        }
     }
+    for (const int fd : disconnect_queue) {
+        deleteClient(fd);
+    }
+    disconnect_queue.clear();
 }
 
 void MPlexServer::Server::modifyEpollFlags(const int fd, const int flags) {
@@ -289,8 +288,14 @@ void MPlexServer::Server::disconnectClient(const Client& c) {
     disconnect_queue.push_back(c.getFd());
 }
 
+void MPlexServer::Server::disconnectClient(const int fd) {
+    if (client_map.find(fd) == client_map.end())
+        return;
+    callHandler(EventType::DISCONNECTED,client_map[fd]);
+    disconnect_queue.push_back(fd);
+}
+
 void MPlexServer::Server::deleteClient(const int fd) {
-    shutdown(fd,SHUT_WR);
     client_map.erase(fd);
     clientCount--;
     send_buffer.erase(fd);
@@ -298,6 +303,7 @@ void MPlexServer::Server::deleteClient(const int fd) {
     if (epoll_ctl(epollfd,EPOLL_CTL_DEL,fd,nullptr) == -1) {
         log("Critical error could not delete fd from epoll.",0);
     }
+    log("Closing client file descriptor.",2);
     close(fd);
 }
 
