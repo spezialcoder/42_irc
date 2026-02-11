@@ -27,6 +27,7 @@ public:
     std::string get_username();
     void        set_hostname(std::string);
     std::string get_hostname();
+    std::string get_signature() const;
 
     [[nodiscard]] bool  is_logged_in() const;
     void                set_as_logged_in(bool is_logged_in);
@@ -40,7 +41,6 @@ private:
     bool                            is_logged_in_ = false;
     bool                            password_provided_ = false;
     bool                            cap_negotiation_ended_ = false;
-    bool                            authenticated_ = false;
     std::string                     nickname_{};
     std::string                     username_{};
     std::string                     hostname_{};

@@ -10,8 +10,6 @@ using std::endl;
 using std::string;
 
 SrvMgr::SrvMgr(MPlexServer::Server& srv, const string& server_password, const string& server_name) : srv_instance_(srv), server_password_(server_password), server_name_(server_name) {
-    // server_nicks.emplace("user");
-    server_nicks_.emplace("dnlspr");
 }
 
 void    SrvMgr::onConnect(MPlexServer::Client client) {
@@ -66,6 +64,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             process_user(msg_parts[1], client, user);
             break;
         case cmdType::JOIN:
+			process_join(msg_parts[1], client, user);
             break;
         case cmdType::PART:
             break;
@@ -80,6 +79,8 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
         case cmdType::KICK:
             break;
         case cmdType::QUIT:
+// incomplete! broadcasting to channel members is missing.
+			process_quit(msg_parts[1], client, user);
             break;
         case cmdType::PING:
             pong(msg_parts[1], client, user);
@@ -97,10 +98,11 @@ void    SrvMgr::try_to_log_in(User &user, const MPlexServer::Client &client) con
     }
     user.set_as_logged_in(true);
     const string nick = user.get_nickname();
-    srv_instance_.sendTo(client, ":" + nick + " " + RPL_WELCOME + " :Welcome to our single-server IRC 'network'.\r\n"); // wrong format, so it does not get displayed
-    srv_instance_.sendTo(client, ":" + nick + " " + RPL_YOURHOST + " :Your host is " + server_name_ + ", running version 1.0.\r\n");
-    srv_instance_.sendTo(client, ":" + nick + " " + RPL_CREATED + " :This server was created today.\r\n");
-    srv_instance_.sendTo(client, ":" + nick + " " + RPL_MYINFO + " :server 1.0 o o\r\n");
+    // cout << ":" + server_name_ + " " + RPL_WELCOME + " :Welcome to our single-server IRC network, " + user.get_signature() << endl;
+    srv_instance_.sendTo(client, ":" + server_name_ + " " + RPL_WELCOME + " " +     nick + " :Welcome to our single-server IRC network, " + user.get_signature() + "\r\n"); // wrong format, so it does not get displayed
+    srv_instance_.sendTo(client, ":" + server_name_ + " " + RPL_YOURHOST + " " + nick + " :Your host is " + server_name_ + ", running version 1.0.\r\n");
+    srv_instance_.sendTo(client, ":" + server_name_ + " " + RPL_CREATED + " " + nick + " :This server was created today.\r\n");
+    srv_instance_.sendTo(client, ":" + server_name_ + " " + RPL_MYINFO + " " + nick + " :server 1.0 o o\r\n");
 }
 
 void    SrvMgr::process_password(const std::string& provided_password, const MPlexServer::Client& client, User& user) const {
@@ -136,19 +138,31 @@ void    SrvMgr::process_cap(const string& s, const MPlexServer::Client& client, 
 }
 
 void    SrvMgr::process_nick(const string& s, const MPlexServer::Client& client, User& user) {
-    if (s.find_first_of("#:; ") != s.npos) {
-        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + user.get_nickname() + " " + s + ":Erroneus nickname, it may not contain \"#:; \"\r\n");
+    string	new_nick;
+	string	old_nick = user.get_nickname();
+	string	old_signature = user.get_signature();
+
+	if (!user.is_logged_in()) {
+		old_nick = "*";
+}
+	if (s.find_first_of("#:; ") == s.npos) {
+		new_nick = s;
+	} else {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + old_nick + " " + s + ":Erroneus nickname, it may not contain \"#:; \"\r\n");
         return ;
     }
-    if (server_nicks_.find(s) == server_nicks_.end()) {
+    if (server_nicks_.find(new_nick) == server_nicks_.end()) {
         if (!(user.get_nickname().empty())) {
             server_nicks_.erase(user.get_nickname());
         }
-        server_nicks_.emplace(s);
-        user.set_nickname(s);
+        server_nicks_.emplace(new_nick, client.getFd());
+        user.set_nickname(new_nick);
+		if (user.is_logged_in()) {
+        	srv_instance_.sendTo(client, ":" + old_signature + " NICK :" + new_nick + "\r\n");
+		}
     }
     else {
-        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NICKNAMEINUSE + " " + user.get_nickname() + " " + s + ":Nickname is already in use\r\n");
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NICKNAMEINUSE + " " + old_nick + " " + s + ":Nickname is already in use\r\n");
     }
     if (!user.is_logged_in()) {
         try_to_log_in(user ,client);
@@ -176,7 +190,7 @@ void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& 
     }
 
     user.set_username(username);
-    user.set_username(hostname);
+    user.set_hostname(hostname);
 
     cout << "process_user: username: " << username
         << " ,hostname: " << hostname << endl;
@@ -193,13 +207,44 @@ void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& 
     }
 }
 
-// void    SrvMgr::join_channel(string s, const MPlexServer::Client& client, User& user) {
-//     string chan_name = s;
-//     if (server_channels_.find(chan_name) == server_channels_.end()) {
-//
-//     }
-// }
+void    SrvMgr::process_join(string s, const MPlexServer::Client& client, User& user) {
+	(void) client;
 
+	string chan_name = s;
+    if (server_channels_.find(chan_name) == server_channels_.end()) {
+		Channel channel(chan_name, user.get_nickname());
+		server_channels_.emplace(chan_name, channel);
+        send_channel_command_ack(channel, client, user);
+		send_channel_greetings(channel, client, user);
+} else {
+		;
+	}
+}
+void    SrvMgr::send_channel_command_ack(Channel& channel, const MPlexServer::Client& client, const User& user) {
+    string  ack = ":" + user.get_nickname() + " JOIN :" + channel.get_channel_name();
+    srv_instance_.sendTo(client, ack + "\r\n");
+}
+
+void    SrvMgr::send_channel_greetings(Channel& channel, const MPlexServer::Client& client, const User& user) {
+    string  topic = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + channel.get_channel_name() + " :" + channel.get_channel_topic();
+    string  name_reply = ":" + server_name_ + " " + RPL_NAMREPLY + " " + user.get_nickname() + " = " + channel.get_channel_name() + " :" + channel.get_all_user_nicks();
+    string  end_of_names = ":" + server_name_ + " " + RPL_ENDOFNAMES + " " + user.get_nickname() + " " + channel.get_channel_name() + " :End of /NAMES list.";
+
+    srv_instance_.sendTo(client, topic + "\r\n");
+	srv_instance_.sendTo(client, name_reply + "\r\n");
+	srv_instance_.sendTo(client, end_of_names + "\r\n");
+cout << topic << endl;
+cout << name_reply << endl;
+cout << end_of_names << endl;
+}
+
+
+void    SrvMgr::process_quit(string s, const MPlexServer::Client &client, User& user) {
+	string	signature = user.get_signature();
+    srv_instance_.sendTo(client, ":" + signature + " QUIT " + s + "\r\n");
+cout << signature + " QUIT " + s << endl;
+	srv_instance_.disconnectClient(client);
+}
 
 void    SrvMgr::pong(const string &s, const MPlexServer::Client &client, const User&) {
     string nick = server_users_[client.getFd()].get_nickname();

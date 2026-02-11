@@ -5,10 +5,6 @@ User::User(MPlexServer::Client& client) : client_(client)
 {
 }
 
-void        User::set_authentication(bool authentification_status) {
-    authenticated_ = authentification_status;
-}
-
 [[nodiscard]] bool User::is_logged_in() const {
     return is_logged_in_;
 }
@@ -32,9 +28,6 @@ void User::set_password_provided(bool password_provided) {
 void User::set_cap_negotiation_ended(bool cap_negotiation_ended) {
     cap_negotiation_ended_ = cap_negotiation_ended;
 }
-bool        User::is_authenticated() {
-    return authenticated_;
-}
 
 void        User::set_nickname(std::string nickname) {
     nickname_ = nickname;
@@ -53,4 +46,9 @@ void        User::set_hostname(std::string hostname) {
 }
 std::string User::get_hostname() {
     return hostname_;
+}
+
+std::string User::get_signature() const {
+    // std::cout << nickname_ + "!" + username_ + "@" + hostname_ << std::endl;
+    return nickname_ + "!" + username_ + "@" + hostname_;
 }

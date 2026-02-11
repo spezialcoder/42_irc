@@ -1,6 +1,6 @@
 #pragma once
 
-#include <map>
+// #include <map>
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
@@ -30,7 +30,10 @@ public:
     void    process_cap(const std::string&, const MPlexServer::Client&, User&) const;
     void    process_nick(const std::string&, const MPlexServer::Client&, User&);
     void    process_user(std::string, const MPlexServer::Client&, User&) const;
-    void    join_channel(std::string, const MPlexServer::Client&, User&);
+    void    process_join(std::string, const MPlexServer::Client&, User&);
+	void    send_channel_command_ack(Channel&, const MPlexServer::Client&,const User&);
+	void    send_channel_greetings(Channel&, const MPlexServer::Client&,const User&);
+    void    process_quit(std::string, const MPlexServer::Client&, User&);
     void    pong(const std::string &, const MPlexServer::Client &, const User&);
 
 
@@ -38,8 +41,8 @@ private:
     MPlexServer::Server&                        srv_instance_;
     const std::string                           server_password_;
     const std::string                           server_name_;
-    std::map<int, User>                         server_users_;
-    std::unordered_set<std::string>             server_nicks_;
+    std::unordered_map<int, User>               server_users_;
+    std::unordered_map<std::string, int>        server_nicks_;
     std::unordered_map<std::string, Channel>    server_channels_;
 };
 

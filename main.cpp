@@ -12,7 +12,7 @@
 
 using namespace MPlexServer;
 
-constexpr int   PORT = 6667;
+constexpr int   PORT = 6666;
 constexpr auto SERVER_PASSWORD = "abc";
 constexpr auto SERVER_NAME = "irc.LeMaDa.hn";
 
