@@ -1,5 +1,5 @@
-#include "../../server/include/mplexserver.h"
-#include "../include/SrvMgr.h"
+#include "mplexserver.h"
+#include "SrvMgr.h"
 
 std::string User::get_farewell_message() const {
     return farewell_message_;

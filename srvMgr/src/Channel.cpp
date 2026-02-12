@@ -1,6 +1,6 @@
 #include <utility>
 
-#include "../include/SrvMgr.h"
+#include "SrvMgr.h"
 
 Channel::Channel(std::string  chan_name, std::string chan_creator) : chan_name_(std::move(chan_name)) {
     chan_nicks_.insert(chan_creator);
@@ -13,6 +13,9 @@ std::string Channel::get_channel_name() {
 }
 std::string Channel::get_channel_topic() {
     return topic_;
+}
+void    Channel::set_channel_topic(std::string& topic) {
+    topic_ = topic;
 }
 std::string Channel::get_user_nicks_str() {
     std::string all_nicks;

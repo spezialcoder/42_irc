@@ -18,6 +18,7 @@ public:
 
     std::string                     get_channel_name();
     std::string                     get_channel_topic();
+    void                            set_channel_topic(std::string&);
     std::string                     get_user_nicks_str();
     std::unordered_set<std::string> get_chan_nicks() const;
     void                            add_operator(std::string);
@@ -27,7 +28,7 @@ public:
 
 private:
     std::string                     chan_name_;
-    std::string                     topic_{};
+    std::string                     topic_{":"};
     std::unordered_set<std::string> chan_nicks_;
     std::unordered_set<std::string> chan_ops_;
 };
