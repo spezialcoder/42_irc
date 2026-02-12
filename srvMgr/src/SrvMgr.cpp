@@ -15,13 +15,20 @@ using std::string;
 // to do :  -generic error code ERR_UNKNOWNERROR if we don't handle the given params
 //          -almost all commands should check if user is registered - else return ERR_NOTREGISTERED
 //
+//          -nick:  change nick in channel lists, too
+//                  update names for other channel users
+//
 //          -join:  what if password is given or required?
 //                  what if multiple channels should be created?
 //                  chan names should only start with & or #
-//          -quit
-//          -part   remove channel after last nick leaves
+//          -kick
+//          -invite
+//          -topic
+//          -mode
 //
 // done:    -ping
+//          -quit
+//          -part
 //
 
 SrvMgr::SrvMgr(MPlexServer::Server& srv, const string& server_password, const string& server_name) : srv_instance_(srv), server_password_(server_password), server_name_(server_name) {
@@ -33,24 +40,22 @@ void    SrvMgr::onConnect(MPlexServer::Client client) {
 }
 
 void    SrvMgr::onDisconnect(MPlexServer::Client client) {
-    User&   user = server_users_[client.getFd()];
+    User&       user = server_users_[client.getFd()];
     std::string nick = user.get_nickname();
+
     cout << "[DISCONNECT] " << nick << " (" << client.getIpv4() << ":" << client.getPort() << ") left" << endl;
+
+
+
     server_users_.erase(client.getFd());
     server_nicks_.erase(nick);
 
     // Broadcast QUIT message in IRC format
-    srv_instance_.broadcast(":" + nick + " QUIT :Client disconnected\r\n");
-    
-    // Remove nickname from maps
-    //if (!nick.empty() && nick != "Unknown") {
-    //    nicknameMap.erase(nick);  // erase using nickname as key, not fd
-    //}
-    //fdToNicknameMap.erase(client.getFd());
-    //awaitingPassword.erase(client.getFd());
-    //usernameMap.erase(client.getFd());
-    //realnameMap.erase(client.getFd());
-    //registeredClients.erase(client.getFd());
+    if (user.get_farewell_message().empty()) {
+        srv_instance_.broadcast(":" + nick + " QUIT :Client disconnected\r\n");
+    } else {
+        srv_instance_.broadcast(":" + nick + " " + user.get_farewell_message() + "\r\n");
+    }
 }
 
 void    SrvMgr::onMessage(const MPlexServer::Message msg) {
@@ -87,7 +92,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
         case cmdType::PRIVMSG:
             process_privmsg(msg_parts[1], client, user);
             break;
-        case cmdType::NOTICE:
+        case cmdType::TOPIC:
             break;
         case cmdType::MODE:
             break;
@@ -163,7 +168,7 @@ void    SrvMgr::process_nick(const string& s, const MPlexServer::Client& client,
 	if (s.find_first_of("#:; ") == s.npos) {
 		new_nick = s;
 	} else {
-        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + old_nick + " " + s + ":Erroneus nickname, it may not contain \"#:; \"\r\n");
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + old_nick + " " + s + ":Erroneous nickname, it may not contain \"#:; \"\r\n");
         return ;
     }
     if (server_nicks_.find(new_nick) == server_nicks_.end()) {
@@ -251,8 +256,7 @@ void    SrvMgr::process_part(string s, const MPlexServer::Client& client, User& 
 
     string  message = ":" + user.get_signature() + " PART " + chan_name + " " + reason;
     send_to_chan_all(channel, message);
-    channel.remove_nick(nick);
-    channel.remove_operator(nick);
+    remove_user_from_channel(channel, nick);
 }
 
 void    SrvMgr::process_privmsg(std::string s, const MPlexServer::Client& client, User& user) {
@@ -295,11 +299,14 @@ void    SrvMgr::process_privmsg(std::string s, const MPlexServer::Client& client
     }
 }
 
+void SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, User& user) {
+    string  chan_name = split_off_before_del(s, ' ');
+    string
+    ;
+}
 
 void    SrvMgr::process_quit(string s, const MPlexServer::Client &client, User& user) {
-	string	signature = user.get_signature();
-    srv_instance_.sendTo(client, ":" + signature + " QUIT " + s + "\r\n");
-cout << signature + " QUIT " + s << endl;
+	user.set_farewell_message(s);
 	srv_instance_.disconnectClient(client);
 }
 
@@ -380,6 +387,17 @@ std::vector<MPlexServer::Client>    SrvMgr::create_client_vector(const std::unor
     return clients;
 }
 
-// void SrvMgr::remove_user_from_channel(std::string &chan_name, std::string &nick) {
-//
-// }
+void    SrvMgr::remove_op_from_channel(Channel& channel, std::string &op) {
+    channel.remove_operator(op);
+    remove_nick_from_channel(channel, op);
+}
+void    SrvMgr::remove_nick_from_channel(Channel& channel, std::string &nick) {
+    channel.remove_nick(nick);
+    if (channel.get_chan_nicks().empty()) {
+        server_channels_.erase(channel.get_channel_name());
+    }
+}
+
+void SrvMgr::remove_user_from_channel(Channel &channel, std::string &nick) {
+    remove_nick_from_channel(channel, nick);
+}

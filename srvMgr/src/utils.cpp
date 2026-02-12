@@ -50,7 +50,7 @@ int     get_msg_type(std::string& s) {
     } else if (s == "PRIVMSG") {
         return cmdType::PRIVMSG;
     } else if (s == "NOTICE") {
-        return cmdType::NOTICE;
+        return cmdType::TOPIC;
     } else if (s == "MODE") {
         return cmdType::MODE;
     } else if (s == "INVITE") {

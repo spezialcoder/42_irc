@@ -1,6 +1,14 @@
 #include "../../server/include/mplexserver.h"
 #include "../include/SrvMgr.h"
 
+std::string User::get_farewell_message() const {
+    return farewell_message_;
+}
+
+void User::set_farewell_message(const std::string& farewell_message) {
+    farewell_message_ = farewell_message;
+}
+
 User::User(MPlexServer::Client& client) : client_(client)
 {
 }
@@ -53,6 +61,5 @@ std::string User::get_hostname() {
 }
 
 std::string User::get_signature() const {
-    // std::cout << nickname_ + "!" + username_ + "@" + hostname_ << std::endl;
     return nickname_ + "!" + username_ + "@" + hostname_;
 }

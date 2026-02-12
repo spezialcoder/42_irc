@@ -33,12 +33,15 @@ public:
     void    process_join(std::string, const MPlexServer::Client&, User&);
     void    process_part(std::string, const MPlexServer::Client&, User&);
     void    process_privmsg(std::string, const MPlexServer::Client&, User&);
+    void    process_topic(std::string, const MPlexServer::Client&, User&);
 	void    send_channel_command_ack(Channel&, const MPlexServer::Client&,const User&);
 	void    send_channel_greetings(Channel&, const MPlexServer::Client&,const User&);
     void    process_quit(std::string, const MPlexServer::Client&, User&);
     void    pong(const std::string &, const MPlexServer::Client &, const User&);
 
-    void    remove_user_from_channel(std::string& chan_name, std::string& nick);
+    void    remove_user_from_channel(Channel& channel, std::string& nick);
+    void    remove_op_from_channel(Channel& channel, std::string& op);
+    void    remove_nick_from_channel(Channel& channel, std::string& nick);
 
     void    send_to_one(const std::string& nick, const std::string& msg);
     void    send_to_one(const User& user, const std::string& msg);
@@ -67,7 +70,7 @@ enum    cmdType {
     JOIN,
     PART,
     PRIVMSG,
-    NOTICE,
+    TOPIC,
     MODE,
     INVITE,
     KICK,

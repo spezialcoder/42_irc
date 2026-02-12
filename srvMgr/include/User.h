@@ -27,12 +27,14 @@ public:
     std::string             get_hostname();
     std::string             get_signature() const;
 
-    [[nodiscard]] bool  is_logged_in() const;
-    void                set_as_logged_in(bool is_logged_in);
-    [[nodiscard]] bool  password_provided() const;
-    void                set_password_provided(bool password_provided);
-    [[nodiscard]] bool  cap_negotiation_ended() const;
-    void                set_cap_negotiation_ended(bool cap_negotiation_ended);
+    [[nodiscard]] std::string   get_farewell_message() const;
+    void                        set_farewell_message(const std::string &farewell_message);
+    [[nodiscard]] bool          is_logged_in() const;
+    void                        set_as_logged_in(bool is_logged_in);
+    [[nodiscard]] bool          password_provided() const;
+    void                        set_password_provided(bool password_provided);
+    [[nodiscard]] bool          cap_negotiation_ended() const;
+    void                        set_cap_negotiation_ended(bool cap_negotiation_ended);
 
 private:
     MPlexServer::Client             client_{};
@@ -42,5 +44,6 @@ private:
     std::string                     nickname_{};
     std::string                     username_{};
     std::string                     hostname_{};
-    std::unordered_set<std::string> channel_names_{}; // really useful? even used?
+    std::unordered_set<std::string> channel_names_{};
+    std::string                     farewell_message_{};
 };
