@@ -1,11 +1,11 @@
 #include <vector>
 
-#include "../../server/include/mplexserver.h"
-#include "../include/Channel.h"
-#include "../include/IRC_macros.h"
-#include "../include/SrvMgr.h"
-#include "../include/User.h"
-#include "../include/utils.h"
+#include "mplexserver.h"
+#include "Channel.h"
+#include "IRC_macros.h"
+#include "SrvMgr.h"
+#include "User.h"
+#include "utils.h"
 
 using std::cout;
 using std::endl;
@@ -93,6 +93,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             process_privmsg(msg_parts[1], client, user);
             break;
         case cmdType::TOPIC:
+            process_topic(msg_parts[1], client, user);
             break;
         case cmdType::MODE:
             break;
@@ -300,9 +301,16 @@ void    SrvMgr::process_privmsg(std::string s, const MPlexServer::Client& client
 }
 
 void SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, User& user) {
+    (void)  client;
+    (void)  user;
     string  chan_name = split_off_before_del(s, ' ');
-    string
-    ;
+    string  new_topic = split_off_before_del(s, ' ');
+    if (new_topic.empty()) {
+        string  topic = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + chan_name + " " + server_channels_[chan_name].get_channel_topic();
+        send_to_one(user.get_nickname(), topic);
+    } else {
+        server_channels_[chan_name].set_channel_topic(s);
+    }
 }
 
 void    SrvMgr::process_quit(string s, const MPlexServer::Client &client, User& user) {
@@ -357,7 +365,7 @@ void    SrvMgr::send_channel_command_ack(Channel& channel, const MPlexServer::Cl
 }
 void    SrvMgr::send_channel_greetings(Channel& channel, const MPlexServer::Client& client, const User& user) {
     (void)  client;
-    string  topic = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + channel.get_channel_name() + " :" + channel.get_channel_topic();
+    string  topic = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + channel.get_channel_name() + " " + channel.get_channel_topic();
     string  name_reply = ":" + server_name_ + " " + RPL_NAMREPLY + " " + user.get_nickname() + " = " + channel.get_channel_name() + " :" + channel.get_user_nicks_str();
     string  end_of_names = ":" + server_name_ + " " + RPL_ENDOFNAMES + " " + user.get_nickname() + " " + channel.get_channel_name() + " :End of /NAMES list.";
 

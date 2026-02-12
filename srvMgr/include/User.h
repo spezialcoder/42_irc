@@ -6,7 +6,7 @@
 
 #include <unordered_set>
 
-#include "../../server/include/mplexserver.h"
+#include "mplexserver.h"
 
 class User
 {

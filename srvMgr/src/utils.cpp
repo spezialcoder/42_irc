@@ -1,8 +1,8 @@
 #include <string>
 #include <vector>
 
-#include "../include/utils.h"
-#include "../include/SrvMgr.h"
+#include "utils.h"
+#include "SrvMgr.h"
 
 void    strip_trailing_rn(std::string& s) {
     while (!s.empty() && (s.back() == '\r' || s.back() == '\n')) {
@@ -49,7 +49,7 @@ int     get_msg_type(std::string& s) {
         return cmdType::PART;
     } else if (s == "PRIVMSG") {
         return cmdType::PRIVMSG;
-    } else if (s == "NOTICE") {
+    } else if (s == "TOPIC") {
         return cmdType::TOPIC;
     } else if (s == "MODE") {
         return cmdType::MODE;
