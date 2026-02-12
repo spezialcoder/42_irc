@@ -18,7 +18,7 @@ public:
 
     User& operator=(const User& other) = default;
 
-    MPlexServer::Client get_client() const;
+    MPlexServer::Client     get_client() const;
     void                    set_nickname(std::string);
     std::string             get_nickname() const;
     void                    set_username(std::string);

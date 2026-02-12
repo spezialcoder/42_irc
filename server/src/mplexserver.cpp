@@ -234,7 +234,7 @@ void MPlexServer::Server::poll() {
     epoll_event events[MAX_EPOLL_EVENTS];
     int numEvents = 0;
     while (true) {
-        numEvents = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, 0); // timeout (in ms) of 0 return immediately (potentially negating the use of poll?)
+        numEvents = epoll_wait(epollfd, events, MAX_EPOLL_EVENTS, 1); // timeout (in ms) of 0 return immediately (potentially negating the use of poll?)
         if (numEvents == EAGAIN) {
             continue;
         }

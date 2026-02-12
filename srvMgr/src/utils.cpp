@@ -10,12 +10,23 @@ void    strip_trailing_rn(std::string& s) {
     }
 }
 
+std::string split_off_before_del(std::string& s, char del) {
+    size_t  idx = s.find_first_of(del);
+    std::string  split_off = s.substr(0, idx);
+    if (idx == std::string::npos) {
+        s = "";
+    } else {
+        s = s.substr(idx + 1, s.length() - idx);
+    }
+    return split_off;
+}
+
 std::vector<std::string>    process_message(std::string s) {
     std::vector<std::string>    msg_parts;
+    size_t                      idx;
 
     strip_trailing_rn(s);
 
-    size_t                      idx;
     idx = s.find_first_of(' ');
     msg_parts.push_back(s.substr(0, idx));
     msg_parts.push_back(s.substr(idx + 1, s.length() - idx));

@@ -31,12 +31,22 @@ public:
     void    process_nick(const std::string&, const MPlexServer::Client&, User&);
     void    process_user(std::string, const MPlexServer::Client&, User&) const;
     void    process_join(std::string, const MPlexServer::Client&, User&);
+    void    process_part(std::string, const MPlexServer::Client&, User&);
+    void    process_privmsg(std::string, const MPlexServer::Client&, User&);
 	void    send_channel_command_ack(Channel&, const MPlexServer::Client&,const User&);
 	void    send_channel_greetings(Channel&, const MPlexServer::Client&,const User&);
     void    process_quit(std::string, const MPlexServer::Client&, User&);
     void    pong(const std::string &, const MPlexServer::Client &, const User&);
-    void    send_to_channel(const Channel& channel, const std::string& msg, const std::string& origin_nick) const;
-    auto    create_client_vector(const std::unordered_set<std::string>& set_of_nicks) const;
+
+    void    remove_user_from_channel(std::string& chan_name, std::string& nick);
+
+    void    send_to_one(const std::string& nick, const std::string& msg);
+    void    send_to_one(const User& user, const std::string& msg);
+    void    send_to_chan_all_but_one(const Channel& channel, const std::string& msg, const std::string& origin_nick) const;
+    void    send_to_chan_all_but_one(const std::string& chan_name, const std::string& msg, const std::string& origin_nick) const;
+    void    send_to_chan_all(const Channel& channel, const std::string& msg) const;
+
+    std::vector<MPlexServer::Client>    create_client_vector(const std::unordered_set<std::string>& set_of_nicks) const;
 
 
 private:
