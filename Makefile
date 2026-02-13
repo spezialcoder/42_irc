@@ -7,6 +7,7 @@ RMDIR    := rm -rf
 
 SRCS     := main.cpp \
 			./srvMgr/src/SrvMgr.cpp \
+			./srvMgr/src/SrvMgrUtils.cpp \
 			./srvMgr/src/User.cpp \
 			./srvMgr/src/Channel.cpp \
 			./srvMgr/src/utils.cpp
