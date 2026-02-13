@@ -22,8 +22,6 @@ public:
     void    onDisconnect(MPlexServer::Client client) override;
     void    onMessage(MPlexServer::Message msg) override;
 
-    void    try_to_log_in(User& user, const MPlexServer::Client& client) const;
-    
     void    process_password(const std::string&, const MPlexServer::Client&, User&) const;
     void    process_cap(const std::string&, const MPlexServer::Client&, User&) const;
     void    process_nick(const std::string&, const MPlexServer::Client&, User&);
@@ -37,13 +35,21 @@ public:
     void    process_quit(std::string, const MPlexServer::Client&, User&);
     void    pong(const std::string &, const MPlexServer::Client &, const User&);
 
+private:
+    void    try_to_log_in(User& user, const MPlexServer::Client& client) const;
+
     void    change_nick(const std::string &new_nick, const std::string& old_nick, User& user);
     void    change_nick_in_channel(const std::string &new_nick, const std::string& old_nick, Channel &channel);
 
+    /**
+     * @brief   Removes nick from the channel's chan_nicks and chan_ops (if applicable).
+     *          If user was the last user on the channel it gets destroyed.
+     */
     void    remove_user_from_channel(Channel& channel, std::string& nick);
     void    remove_op_from_channel(Channel& channel, std::string& op);
     void    remove_nick_from_channel(Channel& channel, std::string& nick);
 
+    // convenience functions, no "\r\n" needed
     void    send_to_one(const std::string& nick, const std::string& msg);
     void    send_to_one(const User& user, const std::string& msg);
     void    send_to_chan_all_but_one(const Channel& channel, const std::string& msg, const std::string& origin_nick) const;
@@ -52,8 +58,6 @@ public:
 
     std::vector<MPlexServer::Client>    create_client_vector(const std::unordered_set<std::string>& set_of_nicks) const;
 
-
-private:
     MPlexServer::Server&                        srv_instance_;
     const std::string                           server_password_;
     const std::string                           server_name_;
