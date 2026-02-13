@@ -12,21 +12,19 @@ using std::endl;
 using std::string;
 
 
-// to do :  -generic error code ERR_UNKNOWNERROR if we don't handle the given params
-//          -almost all commands should check if user is registered - else return ERR_NOTREGISTERED
-//
-//          -nick:  change nick in channel lists, too
-//                  update names for other channel users
+// to do :  argv and arc
+//          handle ctrl+C to exit gracefully
 //
 //          -join:  what if password is given or required?
 //                  what if multiple channels should be created?
 //                  chan names should only start with & or #
 //          -kick
 //          -invite
-//          -topic
 //          -mode
 //
 // done:    -ping
+//          -topic
+//          -nick:
 //          -quit
 //          -part
 //
@@ -70,6 +68,12 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
     }
     cout << "command: " << command << endl;
 
+    if (command > cmdType::USER && !user.is_logged_in()) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered";
+        send_to_one(user, err_msg);
+        return ;
+    }
+
     switch (command) {
         case cmdType::PASS:
             process_password(msg_parts[1], client, user);
@@ -109,6 +113,10 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             break;
         default:
             cout << "no cmd_type found.\n";
+            string  nick = user.get_nickname().empty()? "*" : user.get_nickname();
+            string  err_msg = ":" + server_name_ + " " + ERR_UNKNOWNERROR + " " + nick + " " + ":Could not parse command or parameters";
+            send_to_one(user, err_msg);
+            return ;
     }
 
 }
@@ -166,24 +174,21 @@ void    SrvMgr::process_nick(const string& s, const MPlexServer::Client& client,
 	if (!user.is_logged_in()) {
 		old_nick = "*";
 }
-	if (s.find_first_of("#:; ") == s.npos) {
-		new_nick = s;
-	} else {
-        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + old_nick + " " + s + ":Erroneous nickname, it may not contain \"#:; \"\r\n");
+    if (s.find_first_of("#:; ") != s.npos) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + old_nick + " " + s + " :Erroneous nickname, it may not contain \"#:; \"\r\n");
         return ;
+	} else {
+		new_nick = s;
     }
-    if (server_nicks_.find(new_nick) == server_nicks_.end()) {
-        if (!(user.get_nickname().empty())) {
-            server_nicks_.erase(user.get_nickname());
+    if (server_nicks_.find(new_nick) != server_nicks_.end()) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NICKNAMEINUSE + " " + old_nick + " " + new_nick + " :Nickname is already in use\r\n");
+    } else {
+        change_nick(new_nick, old_nick, user);
+        if (user.is_logged_in()) {
+            string msg = ":" + old_signature + " NICK :" + new_nick;
+            cout << msg << endl;
+            srv_instance_.sendTo(client, msg + "\r\n");
         }
-        server_nicks_.emplace(new_nick, client.getFd());
-        user.set_nickname(new_nick);
-		if (user.is_logged_in()) {
-        	srv_instance_.sendTo(client, ":" + old_signature + " NICK :" + new_nick + "\r\n");
-		}
-    }
-    else {
-        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NICKNAMEINUSE + " " + old_nick + " " + s + ":Nickname is already in use\r\n");
     }
     if (!user.is_logged_in()) {
         try_to_log_in(user ,client);
@@ -395,9 +400,37 @@ std::vector<MPlexServer::Client>    SrvMgr::create_client_vector(const std::unor
     return clients;
 }
 
+void SrvMgr::change_nick(const string &new_nick, const std::string& old_nick, User& user) {
+    for (auto& channel_it : server_channels_) {
+        Channel& channel = channel_it.second;
+        if (channel.has_chan_member(old_nick)) {
+            change_nick_in_channel(new_nick, old_nick, channel);
+        }
+    }
+    if (!old_nick.empty()) {
+        server_nicks_.erase(old_nick);
+    }
+    server_nicks_.emplace(new_nick, user.get_client().getFd());
+    user.set_nickname(new_nick);
+}
+
+void SrvMgr::change_nick_in_channel(const std::string &new_nick, const std::string &old_nick, Channel &channel) {
+    string old_signature = server_users_[server_nicks_[old_nick]].get_signature();
+    if (channel.has_chan_op(old_nick)) {
+        channel.remove_operator(old_nick);
+        channel.add_nick(new_nick);
+    }
+    if (channel.has_chan_member(old_nick)) {
+        channel.remove_nick(old_nick);
+        channel.add_nick(new_nick);
+    }
+    string msg = ":" + old_signature + " NICK :" + new_nick;
+    cout << msg << endl;
+    send_to_chan_all_but_one(channel, msg, new_nick);
+}
+
 void    SrvMgr::remove_op_from_channel(Channel& channel, std::string &op) {
     channel.remove_operator(op);
-    remove_nick_from_channel(channel, op);
 }
 void    SrvMgr::remove_nick_from_channel(Channel& channel, std::string &nick) {
     channel.remove_nick(nick);
@@ -407,5 +440,6 @@ void    SrvMgr::remove_nick_from_channel(Channel& channel, std::string &nick) {
 }
 
 void SrvMgr::remove_user_from_channel(Channel &channel, std::string &nick) {
+    remove_op_from_channel(channel, nick);
     remove_nick_from_channel(channel, nick);
 }
