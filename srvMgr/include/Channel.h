@@ -25,6 +25,8 @@ public:
     int                             remove_operator(std::string);
     void                            add_nick(std::string);
     int                             remove_nick(std::string);
+    bool                            has_chan_member(const std::string &nick);
+    bool                            has_chan_op(const std::string &nick);
 
 private:
     std::string                     chan_name_;

@@ -44,6 +44,6 @@ private:
     std::string                     nickname_{};
     std::string                     username_{};
     std::string                     hostname_{};
-    std::unordered_set<std::string> channel_names_{};
+    // std::unordered_set<std::string> channel_names_{};
     std::string                     farewell_message_{};
 };

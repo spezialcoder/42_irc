@@ -50,3 +50,21 @@ void    Channel::add_nick(std::string nick) {
 int    Channel::remove_nick(std::string nick) {
     return chan_nicks_.erase(nick);
 }
+
+bool Channel::has_chan_member(const std::string &nick) {
+    for (const std::string& member : chan_nicks_) {
+        if (member == nick) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Channel::has_chan_op(const std::string &op) {
+    for (const std::string& member : chan_ops_) {
+        if (member == op) {
+            return true;
+        }
+    }
+    return false;
+}

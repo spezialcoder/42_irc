@@ -37,6 +37,9 @@ public:
     void    process_quit(std::string, const MPlexServer::Client&, User&);
     void    pong(const std::string &, const MPlexServer::Client &, const User&);
 
+    void    change_nick(const std::string &new_nick, const std::string& old_nick, User& user);
+    void    change_nick_in_channel(const std::string &new_nick, const std::string& old_nick, Channel &channel);
+
     void    remove_user_from_channel(Channel& channel, std::string& nick);
     void    remove_op_from_channel(Channel& channel, std::string& op);
     void    remove_nick_from_channel(Channel& channel, std::string& nick);
