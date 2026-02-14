@@ -37,6 +37,14 @@ void User::set_cap_negotiation_ended(bool cap_negotiation_ended) {
     cap_negotiation_ended_ = cap_negotiation_ended;
 }
 
+[[nodiscard]] bool User::cap_negotiation_started() const {
+    return cap_negotiation_started_;
+}
+
+void User::set_cap_negotiation_started(bool cap_negotiation_started) {
+    cap_negotiation_started_ = cap_negotiation_started;
+}
+
 MPlexServer::Client User::get_client() const {
     return client_;
 }

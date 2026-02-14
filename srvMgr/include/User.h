@@ -35,11 +35,14 @@ public:
     void                        set_password_provided(bool password_provided);
     [[nodiscard]] bool          cap_negotiation_ended() const;
     void                        set_cap_negotiation_ended(bool cap_negotiation_ended);
+    [[nodiscard]] bool          cap_negotiation_started() const;
+    void                        set_cap_negotiation_started(bool cap_negotiation_started);
 
 private:
     MPlexServer::Client             client_{};
     bool                            is_logged_in_ = false;
     bool                            password_provided_ = false;
+    bool                            cap_negotiation_started_ = false;
     bool                            cap_negotiation_ended_ = false;
     std::string                     nickname_{};
     std::string                     username_{};

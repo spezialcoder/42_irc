@@ -13,7 +13,8 @@ using std::string;
 
 void    SrvMgr::try_to_log_in(User &user, const MPlexServer::Client &client) const {
     if (user.get_nickname().empty() || user.get_username().empty() ||
-        !user.password_provided() || !user.cap_negotiation_ended()) {
+        !user.password_provided() || 
+        (user.cap_negotiation_started() && !user.cap_negotiation_ended())) {
         return ;
         }
     user.set_as_logged_in(true);

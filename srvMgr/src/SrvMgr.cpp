@@ -60,21 +60,36 @@ void    SrvMgr::onDisconnect(MPlexServer::Client client) {
 void    SrvMgr::onMessage(const MPlexServer::Message msg) {
     const MPlexServer::Client&  client = msg.getClient();
     User&                       user = server_users_[client.getFd()];
-    std::vector<string>         msg_parts = process_message(msg.getMessage());
-    const int                   command = get_msg_type(msg_parts[0]);
+    
+    // Split by \r\n to handle multiple commands in one packet
+    string full_msg = msg.getMessage();
+    size_t start = 0;
+    size_t pos = 0;
+    
+    while (pos < full_msg.length()) {
+        pos = full_msg.find("\r\n", start);
+        if (pos == string::npos) pos = full_msg.length();
+        
+        string line = full_msg.substr(start, pos - start);
+        start = pos + 2;
+        
+        if (line.empty()) continue;
+        
+        std::vector<string>         msg_parts = process_message(line);
+        const int                   command = get_msg_type(msg_parts[0]);
 
 
-    for (auto s : msg_parts) {
-        cout << "message parts '" << s << "'" << endl;
-    }
-    cout << "command: " << command << endl;
+        for (auto s : msg_parts) {
+            cout << "message parts '" << s << "'" << endl;
+        }
+        cout << "command: " << command << endl;
 
-    // some commands are only allowed after the user registered successfully
-    if (command > cmdType::USER && !user.is_logged_in()) {
-        string  err_msg = ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered";
-        send_to_one(user, err_msg);
-        return ;
-    }
+        // some commands are only allowed after the user registered successfully
+        if (command > cmdType::USER && !user.is_logged_in()) {
+            string  err_msg = ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered";
+            send_to_one(user, err_msg);
+            continue;
+        }
 
     switch (command) {
         case cmdType::PASS:
@@ -118,7 +133,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             string  nick = user.get_nickname().empty()? "*" : user.get_nickname();
             string  err_msg = ":" + server_name_ + " " + ERR_UNKNOWNERROR + " " + nick + " " + ":Could not parse command or parameters";
             send_to_one(user, err_msg);
-            return ;
+        }
     }
 
 }
@@ -144,6 +159,7 @@ void    SrvMgr::process_password(const std::string& provided_password, const MPl
 }
 
 void    SrvMgr::process_cap(const string& s, const MPlexServer::Client& client, User& user) const {
+    user.set_cap_negotiation_started(true);
     if (s == "END") {
         user.set_cap_negotiation_ended(true);
     }
