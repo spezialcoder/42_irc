@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>42_IRC: Modern C++ IRC Chat Server</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 2em; background: #f9f9f9; color: #222; }
+    h1, h2, h3 { color: #2c3e50; }
+    code, pre { background: #f4f4f4; border-radius: 4px; padding: 2px 6px; }
+    pre { padding: 1em; overflow-x: auto; }
+    .section { margin-bottom: 2em; }
+    .screenshot { border: 1px solid #ccc; background: #fff; padding: 1em; margin: 1em 0; text-align: center; color: #888; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 2em 0; }
+  </style>
+</head>
+<body>
+<!--  <h1>42_IRC: Modern C++ IRC Chat Server</h1>
+  <hr>
+  <div class="section">
+    <h2>Project Overview</h2>
+    <p><strong>42_IRC</strong> is a student-built, modern C++ implementation of a classic IRC (Internet Relay Chat) server. It brings the legacy IRC protocol—one of the oldest and most robust chat standards—into a clean, maintainable, and extensible codebase. The project demonstrates network programming, protocol parsing, and multi-client management using C++17, with a focus on clarity and educational value.</p>
+    <h3>What is IRC?</h3>
+    <p>IRC is a text-based chat protocol dating back to 1988, still used for group and private messaging. It is:</p>
+    <ul>
+      <li><strong>Open and well-documented</strong></li>
+      <li><strong>Line-based</strong>: Each command/message is a line ending with <code>\r\n</code></li>
+      <li><strong>Stateless</strong>: Clients can connect, join channels, and chat without persistent accounts</li>
+      <li><strong>Extensible</strong>: Supports custom commands and server features</li>
+    </ul>
+    <h3>Project Specialties</h3>
+    <ul>
+      <li>C++17, modular design</li>
+      <li>Custom event-driven server core (no external IRCd)</li>
+      <li>Handles multiple clients and channels</li>
+      <li>Implements core IRC commands (NICK, USER, JOIN, PART, PRIVMSG, etc.)</li>
+      <li>Password-protected server (see below)</li>
+      <li>Verbose debug output for learning and troubleshooting</li>
+    </ul>
+  </div>
+  <hr>
+  <div class="section">
+    <h2>Setup &amp; Installation</h2>
+    <h3>1. Clone the Repository</h3>
+    <pre><code>git clone https://github.com/spezialcoder/42_irc.git
+cd 42_irc</code></pre>
+    <h3>2. Build the Server</h3>
+    <p>Requires: <code>g++</code>, <code>make</code></p>
+    <pre><code>make</code></pre>
+    <h3>3. Run the Server</h3>
+    <pre><code>./ircserv</code></pre>
+    <ul>
+      <li>Default port: <strong>6666</strong> (see <code>main.cpp</code> to change)</li>
+      <li>Default server password: <strong>abc</strong> (see <code>main.cpp</code>)</li>
+    </ul>
+    <h4>Customization</h4>
+    <ul>
+      <li><strong>Port</strong>: Edit <code>constexpr int PORT = 6666;</code> in <code>main.cpp</code></li>
+      <li><strong>Password</strong>: Edit <code>constexpr auto SERVER_PASSWORD = "abc";</code> in <code>main.cpp</code></li>
+      <li><strong>Server name</strong>: Edit <code>constexpr auto SERVER_NAME = ...</code> in <code>main.cpp</code></li>
+    </ul>
+  </div>
+  <hr>
+  <div class="section">
+    <h2>Server Output</h2>
+    <p>The server prints status and debug info to the console:</p>
+    <ul>
+      <li><code>[MPlexServer][timestamp]</code> — Core server events</li>
+      <li><code>[CONNECT]</code> / <code>[DISCONNECT]</code> — Client connections</li>
+      <li><code>[MSG]</code> — Parsed IRC commands and arguments</li>
+      <li><code>[LOGIN]</code> — Registration and login status</li>
+      <li><code>[SERVER] Alive - Uptime: ...</code> — Heartbeat</li>
+    </ul>
+    <pre><code>[MPlexServer][2026-02-14@14:30:36] PASS abc
+[MSG] Command: PASS (type: 0)
+<html lang="en"> -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>42_IRC: Modern C++ IRC Chat Server</title>
+  <style>
+    body {
+      font-family: 'Inter', 'Segoe UI', 'Liberation Sans', 'DejaVu Sans', Arial, sans-serif;
+      background: #181c24;
+      color: #e6e6e6;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 820px;
+      margin: 2em auto;
+      background: #23283a;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px #0006;
+      padding: 2.5em 2em 2em 2em;
+    }
+    h1, h2, h3, h4 {
+      color: #7ed6df;
+      margin-top: 1.5em;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.5em;
+      margin-bottom: 0.2em;
+    }
+    .badges {
+      text-align: center;
+      margin-bottom: 1.5em;
+    }
+    .badges img {
+      margin: 0 0.2em;
+      vertical-align: middle;
+    }
+    .logo {
+      display: block;
+      margin: 0 auto 1em auto;
+      width: 90px;
+      filter: drop-shadow(0 2px 8px #0008);
+    }
+    .toc {
+      background: #20243a;
+      border-radius: 8px;
+      padding: 1em 1.5em;
+      margin-bottom: 2em;
+      color: #b2becd;
+      font-size: 1.05em;
+    }
+    .toc a {
+      color: #7ed6df;
+      text-decoration: none;
+      margin-right: 1.2em;
+    }
+    .toc a:hover {
+      text-decoration: underline;
+    }
+    pre, code {
+      background: #23283a;
+      color: #f6e58d;
+      border-radius: 5px;
+      font-size: 1em;
+    }
+    pre {
+      padding: 1em;
+      overflow-x: auto;
+      margin: 1em 0;
+    }
+    .callout {
+      background: #1e2a38;
+      border-left: 5px solid #7ed6df;
+      padding: 1em 1.5em;
+      margin: 1.5em 0;
+      border-radius: 6px;
+      color: #b2becd;
+    }
+    .section {
+      margin-bottom: 2.5em;
+    }
+    .screenshot {
+      border: 2px dashed #7ed6df;
+      background: #23283a;
+      padding: 1.5em;
+      margin: 1.5em 0;
+      text-align: center;
+      color: #7ed6df;
+      border-radius: 8px;
+      font-size: 1.1em;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #2d3a4a;
+      margin: 2.5em 0;
+    }
+    ul, ol {
+      margin-left: 1.5em;
+    }
+    a { color: #7ed6df; }
+    @media (max-width: 600px) {
+      .container { padding: 1em; }
+      h1 { font-size: 1.5em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>42_IRC: Modern C++ IRC Chat Server 🚀</h1>
+    <div class="badges">
+      <img src="https://img.shields.io/badge/C%2B%2B-17-blue.svg" alt="C++17"/>
+      <img src="https://img.shields.io/badge/Protocol-IRC-blueviolet" alt="IRC Protocol"/>
+      <img src="https://img.shields.io/badge/Type-Student%20Project-brightgreen" alt="Student Project"/>
+    </div>
+    <div class="toc">
+      <a href="#project-overview">Project Overview</a>
+      <a href="#setup-installation">Setup & Installation</a>
+      <a href="#server-output">Server Output</a>
+      <a href="#connecting-with-weechat">WeeChat</a>
+      <a href="#testing-capabilities">Testing</a>
+      <a href="#ideas-for-further-exploration">Ideas</a>
+      <a href="#about">About</a>
+    </div>
+    <hr>
+    <div class="section" id="project-overview">
+      <h2>📝 Project Overview</h2>
+      <p><strong>42_IRC</strong> is a student-built, modern C++ implementation of a classic IRC (Internet Relay Chat) server. It brings the legacy IRC protocol — one of the oldest and most robust chat standards — into a clean, maintainable, and extensible codebase. The project demonstrates network programming, protocol parsing, and multi-client management using C++17, with a focus on clarity and educational value.</p>
+      <div class="callout">
+        <strong>What is IRC?</strong><br>
+        IRC is a text-based chat protocol dating back to 1988, still used for group and private messaging. It is:
+        <ul>
+          <li><strong>Open and well-documented</strong></li>
+          <li><strong>Line-based</strong>: Each command/message is a line ending with <code>\r\n</code></li>
+          <li><strong>Stateless</strong>: Clients can connect, join channels, and chat without persistent accounts</li>
+          <li><strong>Extensible</strong>: Supports custom commands and server features</li>
+        </ul>
+      </div>
+      <h3>✨ Project Specialties</h3>
+      <ul>
+        <li>C++17, modular design</li>
+        <li>Custom event-driven server core (no external IRCd)</li>
+        <li>Handles multiple clients and channels</li>
+        <li>Implements core IRC commands (NICK, USER, JOIN, PART, PRIVMSG, etc.)</li>
+        <li>Password-protected server (see below)</li>
+        <li>Verbose debug output for learning and troubleshooting</li>
+      </ul>
+    </div>
+    <hr>
+    <div class="section" id="setup-installation">
+      <h2>⚡ Setup & Installation</h2>
+      <h3>1. Clone the Repository</h3>
+      <pre><code>git clone https://github.com/spezialcoder/42_irc.git
+cd 42_irc</code></pre>
+      <h3>2. Build the Server</h3>
+      <p>Requires: <code>g++</code>, <code>make</code></p>
+      <pre><code>make</code></pre>
+      <h3>3. Run the Server</h3>
+      <pre><code>./ircserv</code></pre>
+      <ul>
+        <li>Default port: <strong>6666</strong> (see <code>main.cpp</code> to change)</li>
+        <li>Default server password: <strong>abc</strong> (see <code>main.cpp</code>)</li>
+		<li>Default server name: <strong>irc.LeMaDa.hn</strong> (see <code>main.cpp</code>)</li>
+		<li>Leave terminal open while running the server</li>
+		<li>Use Ctrl+C to stop the server gracefully</li>
+      </ul>
+      <div class="callout">
+        <strong>💡 Customization:</strong><br>
+        <ul>
+          <li><strong>Port</strong>: Edit <code>constexpr int PORT = 6666;</code> in <code>main.cpp</code></li>
+          <li><strong>Password</strong>: Edit <code>constexpr auto SERVER_PASSWORD = "abc";</code> in <code>main.cpp</code></li>
+          <li><strong>Server name</strong>: Edit <code>constexpr auto SERVER_NAME = ...</code> in <code>main.cpp</code></li>
+        </ul>
+      </div>
+    </div>
+    <hr>
+    <div class="section" id="server-output">
+      <h2>🖥️ Server Output</h2>
+      <p>The server prints status and debug info to the console:</p>
+      <ul>
+        <li><code>[MPlexServer][timestamp]</code> — Core server events</li>
+        <li><code>[CONNECT]</code> / <code>[DISCONNECT]</code> — Client connections</li>
+        <li><code>[MSG]</code> — Parsed IRC commands and arguments</li>
+        <li><code>[LOGIN]</code> — Registration and login status</li>
+        <li><code>[SERVER] Alive - Uptime: ...</code> — Heartbeat</li>
+      </ul>
+      <img src="pics/server_output.png" alt="Server Console Output" style="width:100%;border-radius:8px;box-shadow:0 4px 12px #0008;">
+    </div>
+    <hr>
+    <div class="section" id="connecting-with-weechat">
+      <h2>💬 Connecting with WeeChat</h2>
+      <ol>
+        <li><strong>Install WeeChat</strong><br>
+          <pre><code>sudo apt install weechat
+# or use your OS package manager</code></pre>
+        </li>
+        <li><strong>Start WeeChat</strong><br>
+          <pre><code>weechat</code></pre>
+        </li>
+        <li><strong>Add the IRC server</strong><br>
+          In WeeChat, type:<br>
+          <pre><code>/server add 42irc 157.90.114.127/6666 -password=abc
+/connect 42irc</code></pre>
+        </li>
+		<li>upon successful connection:	</li>
+		<img src="pics/connect_success.png" alt="WeeChat Connection Screenshot" style="width:100%;border-radius:8px;box-shadow:0 4px 12px #0008;">
+        <li><strong>Join a channel</strong><br>
+			<p>With <code>/join #channel</code> you can join existing channels or create new ones if that name doesn't already exist.</p>
+        </li>
+		<img src="pics/join_success.png" alt="WeeChat Join Screenshot" style="width:100%;border-radius:8px;box-shadow:0 4px 12px #0008;">
+      </ol>
+      
+    </div>
+    <hr>
+    <div class="section" id="testing-capabilities">
+      <h2>🧪 Testing & Capabilities</h2>
+      <ul>
+        <li><strong>Multiple clients</strong>: Connect from several terminals or machines</li>
+        <li><strong>Channel management</strong>: <code>/join #channel</code>, <code>/part #channel</code></li>
+        <li><strong>Private messaging</strong>: <code>/msg nick message</code></li>
+        <li><strong>Server password</strong>: Try connecting with/without the correct password</li>
+        <li><strong>Custom server name/port</strong>: Change in <code>main.cpp</code> and rebuild</li>
+        <li><strong>Observe debug output</strong>: Watch how the server parses and responds to commands</li>
+      </ul>
+    </div>
+    <hr>
+    <div class="section" id="ideas-for-further-exploration">
+      <h2>🚀 Ideas for Further Exploration</h2>
+      <ul>
+        <li>Implement more IRC commands (MODE, TOPIC, KICK, etc.)</li>
+        <li>Add logging to file</li>
+        <li>Add SSL/TLS support</li>
+        <li>Build a web-based IRC client</li>
+        <li>Experiment with bots or automation</li>
+      </ul>
+    </div>
+    <hr>
+    <div class="section" id="about">
+      <h2>👩‍💻 About</h2>
+      <p>This project was created as a student exercise in network programming and protocol design. It is intended for learning, experimentation, and as a foundation for more advanced chat systems.</p>
+	  <p>Daniel Spring, Lewin Sorg, Matthias Naumann</p>
+    <hr>
+    <p style="text-align:center;font-size:1.2em;"><strong>Happy chatting! 🎉</strong></p>
+  </div>
+</body>
+</html>
