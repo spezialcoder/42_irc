@@ -129,6 +129,7 @@ The server prints status and debug info to the console:
 - Add SSL/TLS support
 - Build a web-based IRC client
 - Experiment with bots or automation
+- https://modern.ircdocs.horse/ Modern IRC Documentation
 
 ---
 
