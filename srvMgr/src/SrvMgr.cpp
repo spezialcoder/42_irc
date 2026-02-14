@@ -18,13 +18,14 @@ using std::string;
 //          -join:  what if password is given or required?
 //                  what if multiple channels should be created?
 //                  chan names should only start with & or #
+//                  needs creation time
 //          -kick
 //          -invite
 //          -mode
 //
 // done:    -ping           - ERR_NEEDMOREPARAMS
 // unless   -topic          - RPL_NOTOPIC , only ops can set topic
-// farming  -nick:
+// farming  -nick
 // lines    -quit           - sending to channels only instead of broadcast
 //          -user           - ERR_ALREADYREGISTERED
 //          -part
@@ -310,6 +311,32 @@ void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, 
     } else {
         server_channels_[chan_name].set_channel_topic(s);
     }
+}
+
+void SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, User& user) {
+    (void)  client;
+    (void)  user;
+    string  target = split_off_before_del(s, ' ');          // must be a channel (as per the subject file)
+    string  modestring = split_off_before_del(s, ' ');      // +-itkol
+    string  mode_arguments = split_off_before_del(s, ' ');  // only for +kol-o
+    // char    plusminus;
+
+    if (modestring[0] != '-' && modestring[0] != '+') {
+        string  topic = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " MODE :Not enough parameters";
+        send_to_one(user.get_nickname(), topic);
+    }
+    // for (char m : modestring) {
+    //     if (m == '-') plusminus = m;
+    //     if (m == '+') plusminus = m;
+    //     if (m == 'i') mode_i(plusminus, mode_arguments, user);
+    //     if (m == 't') mode_t(plusminus, mode_arguments, user);
+    //     if (m == 'k') mode_k(plusminus, mode_arguments, TODO, user);
+    //     if (m == 'o') mode_o(plusminus, mode_arguments, user);
+    //     if (m == 'l') mode_l(plusminus, mode_arguments, user);
+    // }
+
+
+
 }
 
 void    SrvMgr::process_quit(string s, const MPlexServer::Client &client, User& user) {

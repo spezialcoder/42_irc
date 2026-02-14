@@ -65,20 +65,6 @@ void    SrvMgr::send_to_chan_all_but_one(const std::string& chan_name, const std
     send_to_chan_all_but_one(channel, msg, origin_nick);
 }
 
-void    SrvMgr::remove_op_from_channel(Channel& channel, std::string &op) {
-    channel.remove_operator(op);
-}
-void    SrvMgr::remove_nick_from_channel(Channel& channel, std::string &nick) {
-    channel.remove_nick(nick);
-    if (channel.get_chan_nicks().empty()) {
-        server_channels_.erase(channel.get_channel_name());
-    }
-}
-void    SrvMgr::remove_user_from_channel(Channel &channel, std::string &nick) {
-    remove_op_from_channel(channel, nick);
-    remove_nick_from_channel(channel, nick);
-}
-
 void    SrvMgr::change_nick(const string &new_nick, const std::string& old_nick, User& user) {
     for (auto& channel_it : server_channels_) {
         Channel& channel = channel_it.second;
@@ -105,6 +91,20 @@ void    SrvMgr::change_nick_in_channel(const std::string &new_nick, const std::s
     string msg = ":" + old_signature + " NICK :" + new_nick;
     cout << msg << endl;
     send_to_chan_all_but_one(channel, msg, new_nick);
+}
+
+void    SrvMgr::remove_op_from_channel(Channel& channel, std::string &op) {
+    channel.remove_operator(op);
+}
+void    SrvMgr::remove_nick_from_channel(Channel& channel, std::string &nick) {
+    channel.remove_nick(nick);
+    if (channel.get_chan_nicks().empty()) {
+        server_channels_.erase(channel.get_channel_name());
+    }
+}
+void    SrvMgr::remove_user_from_channel(Channel &channel, std::string &nick) {
+    remove_op_from_channel(channel, nick);
+    remove_nick_from_channel(channel, nick);
 }
 
 void    SrvMgr::send_channel_command_ack(Channel& channel, const MPlexServer::Client& client, const User& user) {

@@ -45,10 +45,16 @@ int    Channel::remove_operator(std::string op) {
 
 void    Channel::add_nick(std::string nick) {
     chan_nicks_.insert(nick);
+    member_count_++;
+
 }
 
-int    Channel::remove_nick(std::string nick) {
-    return chan_nicks_.erase(nick);
+int Channel::remove_nick(std::string nick) {
+    if (chan_nicks_.erase(nick) == 1) {
+        member_count_--;
+        return 1;
+    }
+    return 0;
 }
 
 bool Channel::has_chan_member(const std::string &nick) {
@@ -67,4 +73,36 @@ bool Channel::has_chan_op(const std::string &op) {
         }
     }
     return false;
+}
+
+void Channel::set_key(const std::string &key) {
+    key_ = key;
+}
+
+int Channel::get_member_count() const {
+    return member_count_;
+}
+
+int Channel::get_member_limit() const {
+    return member_limit_;
+}
+
+void Channel::set_member_limit(int member_limit) {
+    member_limit_ = member_limit;
+}
+
+bool Channel::topic_protected() const {
+    return topic_protected_;
+}
+
+void Channel::set_topic_protected(bool topic_protected) {
+    topic_protected_ = topic_protected;
+}
+
+bool Channel::needs_invite() const {
+    return needs_invite_;
+}
+
+void Channel::set_needs_invite(bool needs_invite) {
+    needs_invite_ = needs_invite;
 }

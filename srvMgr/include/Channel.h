@@ -28,9 +28,25 @@ public:
     bool                            has_chan_member(const std::string &nick);
     bool                            has_chan_op(const std::string &nick);
 
+    void set_key(const std::string &key);
+    [[nodiscard]] int get_member_count() const;
+    [[nodiscard]] int get_member_limit() const;
+    void set_member_limit(int member_limit);
+    [[nodiscard]] bool topic_protected() const;
+    void set_topic_protected(bool topic_protected);
+    [[nodiscard]] bool needs_invite() const;
+    void set_needs_invite(bool needs_invite);
+
 private:
     std::string                     chan_name_;
+    std::string                     key_{};
     std::string                     topic_{":"};
+    int                             member_count_{0};
+    int                             member_limit_{0};
+    bool                            topic_protected_{false};
+    bool                            needs_invite_{false};
+
     std::unordered_set<std::string> chan_nicks_;
     std::unordered_set<std::string> chan_ops_;
+    std::unordered_set<std::string> invites_;
 };
