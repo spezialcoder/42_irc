@@ -78,21 +78,6 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
         return ;
     }
 
-        switch (command) {
-
-
-        for (auto s : msg_parts) {
-            cout << "message parts '" << s << "'" << endl;
-        }
-        cout << "command: " << command << endl;
-
-        // some commands are only allowed after the user registered successfully
-        if (command > cmdType::USER && !user.is_logged_in()) {
-            string  err_msg = ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered";
-            send_to_one(user, err_msg);
-            continue;
-        }
-
     switch (command) {
         case cmdType::PASS:
             process_password(msg_parts[1], client, user);
