@@ -96,7 +96,7 @@ The server prints status and debug info to the console:
 3. **Add the IRC server**
    In WeeChat, type:
    ```
-   /server add 42irc 157.90.114.127/6666 -password=abc
+   /server add 42irc *ask project team*/6666 -password=*easy as ...*
    /connect 42irc
    ```
    
