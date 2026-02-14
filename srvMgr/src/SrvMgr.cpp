@@ -91,48 +91,48 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             continue;
         }
 
-    switch (command) {
-        case cmdType::PASS:
-            process_password(msg_parts[1], client, user);
-            break;
-        case cmdType::CAP:
-            process_cap(msg_parts[1], client, user);
-            break;
-        case cmdType::NICK:
-            process_nick(msg_parts[1], client, user);
-            break;
-        case cmdType::USER:
-            process_user(msg_parts[1], client, user);
-            break;
-        case cmdType::JOIN:
-			process_join(msg_parts[1], client, user);
-            break;
-        case cmdType::PART:
-            process_part(msg_parts[1], client, user);
-            break;
-        case cmdType::PRIVMSG:
-            process_privmsg(msg_parts[1], client, user);
-            break;
-        case cmdType::TOPIC:
-            process_topic(msg_parts[1], client, user);
-            break;
-        case cmdType::MODE:
-            break;
-        case cmdType::INVITE:
-            break;
-        case cmdType::KICK:
-            break;
-        case cmdType::QUIT:
-			process_quit(msg_parts[1], client, user);
-            break;
-        case cmdType::PING:
-            pong(msg_parts[1], client, user);
-            break;
-        default:
-            cout << "no cmd_type found.\n";
-            string  nick = user.get_nickname().empty()? "*" : user.get_nickname();
-            string  err_msg = ":" + server_name_ + " " + ERR_UNKNOWNERROR + " " + nick + " " + ":Could not parse command or parameters";
-            send_to_one(user, err_msg);
+        switch (command) {
+            case cmdType::PASS:
+                process_password(msg_parts[1], client, user);
+                break;
+            case cmdType::CAP:
+                process_cap(msg_parts[1], client, user);
+                break;
+            case cmdType::NICK:
+                process_nick(msg_parts[1], client, user);
+                break;
+            case cmdType::USER:
+                process_user(msg_parts[1], client, user);
+                break;
+            case cmdType::JOIN:
+                process_join(msg_parts[1], client, user);
+                break;
+            case cmdType::PART:
+                process_part(msg_parts[1], client, user);
+                break;
+            case cmdType::PRIVMSG:
+                process_privmsg(msg_parts[1], client, user);
+                break;
+            case cmdType::TOPIC:
+                process_topic(msg_parts[1], client, user);
+                break;
+            case cmdType::MODE:
+                break;
+            case cmdType::INVITE:
+                break;
+            case cmdType::KICK:
+                break;
+            case cmdType::QUIT:
+                process_quit(msg_parts[1], client, user);
+                break;
+            case cmdType::PING:
+                pong(msg_parts[1], client, user);
+                break;
+            default:
+                cout << "no cmd_type found.\n";
+                string  nick = user.get_nickname().empty()? "*" : user.get_nickname();
+                string  err_msg = ":" + server_name_ + " " + ERR_UNKNOWNERROR + " " + nick + " " + ":Could not parse command or parameters";
+                send_to_one(user, err_msg);
         }
     }
 
