@@ -61,37 +61,24 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
     const MPlexServer::Client&  client = msg.getClient();
     User&                       user = server_users_[client.getFd()];
     
-    // Split by \r\n to handle multiple commands in one packet
-    string full_msg = msg.getMessage();
-    cout << "[SPLIT DEBUG] Full message length: " << full_msg.length() << endl;
-    cout << "[SPLIT DEBUG] Full message: '" << full_msg << "'" << endl;
+    cout << "[MSG] Received: '" << msg.getMessage() << "'" << endl;
     
-    size_t start = 0;
-    size_t pos = 0;
-    int iteration = 0;
-    
-    while (start < full_msg.length()) {
-        iteration++;
-        cout << "[SPLIT DEBUG] Iteration " << iteration << ", start=" << start << ", full_msg.length()=" << full_msg.length() << endl;
-        
-        pos = full_msg.find("\r\n", start);
-        cout << "[SPLIT DEBUG] Found \\r\\n at position: " << pos << endl;
-        
-        if (pos == string::npos) pos = full_msg.length();
-        
-        string line = full_msg.substr(start, pos - start);
-        cout << "[SPLIT DEBUG] Extracted line: '" << line << "'" << endl;
-        
-        start = pos + 2;
-        cout << "[SPLIT DEBUG] Next start will be: " << start << endl;
-        
-        if (line.empty()) {
-            cout << "[SPLIT DEBUG] Line is empty, continuing" << endl;
-            continue;
-        }
-        
-        std::vector<string>         msg_parts = process_message(line);
-        const int                   command = get_msg_type(msg_parts[0]);
+    std::vector<string>         msg_parts = process_message(msg.getMessage());
+    const int                   command = get_msg_type(msg_parts[0]);
+
+    cout << "[MSG] Command: " << msg_parts[0] << " (type: " << command << ")" << endl;
+    if (msg_parts.size() > 1 && !msg_parts[1].empty()) {
+        cout << "[MSG] Args: '" << msg_parts[1] << "'" << endl;
+    }
+
+    // some commands are only allowed after the user registered successfully
+    if (command > cmdType::USER && !user.is_logged_in()) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NOTREGISTERED + " * " + ":You have not registered";
+        send_to_one(user, err_msg);
+        return ;
+    }
+
+        switch (command) {
 
 
         for (auto s : msg_parts) {
@@ -106,49 +93,49 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             continue;
         }
 
-        switch (command) {
-            case cmdType::PASS:
-                process_password(msg_parts[1], client, user);
-                break;
-            case cmdType::CAP:
-                process_cap(msg_parts[1], client, user);
-                break;
-            case cmdType::NICK:
-                process_nick(msg_parts[1], client, user);
-                break;
-            case cmdType::USER:
-                process_user(msg_parts[1], client, user);
-                break;
-            case cmdType::JOIN:
-                process_join(msg_parts[1], client, user);
-                break;
-            case cmdType::PART:
-                process_part(msg_parts[1], client, user);
-                break;
-            case cmdType::PRIVMSG:
-                process_privmsg(msg_parts[1], client, user);
-                break;
-            case cmdType::TOPIC:
-                process_topic(msg_parts[1], client, user);
-                break;
-            case cmdType::MODE:
-                break;
-            case cmdType::INVITE:
-                break;
-            case cmdType::KICK:
-                break;
-            case cmdType::QUIT:
-                process_quit(msg_parts[1], client, user);
-                break;
-            case cmdType::PING:
-                pong(msg_parts[1], client, user);
-                break;
-            default:
-                cout << "no cmd_type found.\n";
-                string  nick = user.get_nickname().empty()? "*" : user.get_nickname();
-                string  err_msg = ":" + server_name_ + " " + ERR_UNKNOWNERROR + " " + nick + " " + ":Could not parse command or parameters";
-                send_to_one(user, err_msg);
-        }
+    switch (command) {
+        case cmdType::PASS:
+            process_password(msg_parts[1], client, user);
+            break;
+        case cmdType::CAP:
+            process_cap(msg_parts[1], client, user);
+            break;
+        case cmdType::NICK:
+            process_nick(msg_parts[1], client, user);
+            break;
+        case cmdType::USER:
+            process_user(msg_parts[1], client, user);
+            break;
+        case cmdType::JOIN:
+            process_join(msg_parts[1], client, user);
+            break;
+        case cmdType::PART:
+            process_part(msg_parts[1], client, user);
+            break;
+        case cmdType::PRIVMSG:
+            process_privmsg(msg_parts[1], client, user);
+            break;
+        case cmdType::TOPIC:
+            process_topic(msg_parts[1], client, user);
+            break;
+        case cmdType::MODE:
+            break;
+        case cmdType::INVITE:
+            break;
+        case cmdType::KICK:
+            break;
+        case cmdType::QUIT:
+            process_quit(msg_parts[1], client, user);
+            break;
+        case cmdType::PING:
+            pong(msg_parts[1], client, user);
+            break;
+        default:
+            cout << "no cmd_type found.\n";
+            string  nick = user.get_nickname().empty()? "*" : user.get_nickname();
+            string  err_msg = ":" + server_name_ + " " + ERR_UNKNOWNERROR + " " + nick + " " + ":Could not parse command or parameters";
+            send_to_one(user, err_msg);
+            return ;
     }
 
 }
@@ -216,6 +203,8 @@ void    SrvMgr::process_nick(const string& s, const MPlexServer::Client& client,
 }
 
 void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& user) const {
+    cout << "[USER] Processing USER command with params: '" << s << "'" << endl;
+    
     if (user.is_logged_in()) {
         srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ALREADYREGISTERED + " " + user.get_nickname() + " " + ":You may not reregister\r\n");
         return ;

@@ -159,7 +159,7 @@ void MPlexServer::Server::recv_from_fd(const int fd) {
     const size_t safe_len = std::min<size_t>(n,MAX_MSG_LEN-1);
     buffer[safe_len] = 0;
     r_buffer.append(buffer);
-    if (r_buffer.find("\r\n") != std::string::npos) {
+    while (r_buffer.find("\r\n") != std::string::npos) {
         std::string msg = r_buffer.substr(0,r_buffer.find("\r\n")+1);
         r_buffer.erase(0,r_buffer.find("\r\n")+2);
         log(buffer,2);

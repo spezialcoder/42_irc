@@ -12,11 +12,17 @@ using std::endl;
 using std::string;
 
 void    SrvMgr::try_to_log_in(User &user, const MPlexServer::Client &client) const {
+    cout << "[LOGIN] Checking login: nick='" << user.get_nickname() << "', user='" << user.get_username() 
+         << "', pass=" << user.password_provided() << ", cap_started=" << user.cap_negotiation_started()
+         << ", cap_ended=" << user.cap_negotiation_ended() << endl;
+    
     if (user.get_nickname().empty() || user.get_username().empty() ||
         !user.password_provided() || 
         (user.cap_negotiation_started() && !user.cap_negotiation_ended())) {
+        cout << "[LOGIN] Requirements not met, login blocked" << endl;
         return ;
         }
+    cout << "[LOGIN] ✓ All requirements met, logging in user '" << user.get_nickname() << "'" << endl;
     user.set_as_logged_in(true);
     const string nick = user.get_nickname();
     srv_instance_.sendTo(client, ":" + server_name_ + " " + RPL_WELCOME + " " + nick + " :Welcome to our single-server IRC network, " + user.get_signature() + "\r\n");
