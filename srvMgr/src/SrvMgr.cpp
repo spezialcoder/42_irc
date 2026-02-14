@@ -63,17 +63,32 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
     
     // Split by \r\n to handle multiple commands in one packet
     string full_msg = msg.getMessage();
+    cout << "[SPLIT DEBUG] Full message length: " << full_msg.length() << endl;
+    cout << "[SPLIT DEBUG] Full message: '" << full_msg << "'" << endl;
+    
     size_t start = 0;
     size_t pos = 0;
+    int iteration = 0;
     
     while (start < full_msg.length()) {
+        iteration++;
+        cout << "[SPLIT DEBUG] Iteration " << iteration << ", start=" << start << ", full_msg.length()=" << full_msg.length() << endl;
+        
         pos = full_msg.find("\r\n", start);
+        cout << "[SPLIT DEBUG] Found \\r\\n at position: " << pos << endl;
+        
         if (pos == string::npos) pos = full_msg.length();
         
         string line = full_msg.substr(start, pos - start);
-        start = pos + 2;
+        cout << "[SPLIT DEBUG] Extracted line: '" << line << "'" << endl;
         
-        if (line.empty()) continue;
+        start = pos + 2;
+        cout << "[SPLIT DEBUG] Next start will be: " << start << endl;
+        
+        if (line.empty()) {
+            cout << "[SPLIT DEBUG] Line is empty, continuing" << endl;
+            continue;
+        }
         
         std::vector<string>         msg_parts = process_message(line);
         const int                   command = get_msg_type(msg_parts[0]);
