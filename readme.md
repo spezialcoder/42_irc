@@ -135,8 +135,7 @@ The server prints status and debug info to the console:
 ## 👩‍💻 About
 This project was created as a student exercise in network programming and protocol design. It is intended for learning, experimentation, and as a foundation for more advanced chat systems.
 
-> ![Screenshot Placeholder](https://dummyimage.com/600x120/cccccc/222222&text=Server+Console+Output+Screenshot)
-
+Lewin Sorg, Matthias Naumann, Daniel Spring
 ---
 
 **Happy chatting! 🎉**
