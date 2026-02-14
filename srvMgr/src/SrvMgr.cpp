@@ -66,7 +66,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
     size_t start = 0;
     size_t pos = 0;
     
-    while (pos < full_msg.length()) {
+    while (start < full_msg.length()) {
         pos = full_msg.find("\r\n", start);
         if (pos == string::npos) pos = full_msg.length();
         
