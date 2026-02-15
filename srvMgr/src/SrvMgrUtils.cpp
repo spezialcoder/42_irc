@@ -74,7 +74,7 @@ void SrvMgr::mode_o(char plusminus, std::string &mode_arguments, Channel &channe
     }
     if (plusminus == '-') {
         channel.remove_operator(target_nick);
-        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " +o " + target_nick;
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " -o " + target_nick;
         send_to_chan_all(channel, msg);
     } else if (plusminus == '+') {
         channel.add_operator(target_nick);
