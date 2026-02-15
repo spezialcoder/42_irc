@@ -42,24 +42,21 @@ void    SrvMgr::onConnect(MPlexServer::Client client) {
 void    SrvMgr::onDisconnect(MPlexServer::Client client) {
     User&       user = server_users_[client.getFd()];
     std::string nick = user.get_nickname();
+    std::string signature = ":" + user.get_signature();
 
     cout << "[DISCONNECT] " << nick << " (" << client.getIpv4() << ":" << client.getPort() << ") left" << endl;
 
 
 
     server_users_.erase(client.getFd());
-    if (nick.empty()) {
-        nick = "unregistered user";
-    } else {
+    if (user.is_logged_in()) {
         server_nicks_.erase(nick);
-    }
-
-    // Broadcast QUIT message in IRC format
-    if (user.get_farewell_message().empty()) {
-        srv_instance_.broadcast(":" + nick + " QUIT :Client disconnected\r\n");
-    } else {
-        cout << ":" + nick + " QUIT " + user.get_farewell_message() << endl;
-        srv_instance_.broadcast(":" + nick + " QUIT " + user.get_farewell_message() + "\r\n");
+        if (user.get_farewell_message().empty()) {
+            srv_instance_.broadcast(":" + user.get_signature() + " QUIT :Quit:Client disconnected\r\n");
+        } else {
+            cout << ":" + user.get_signature() + " QUIT " + user.get_farewell_message() << endl;
+            srv_instance_.broadcast(":" + user.get_signature() + " QUIT :Quit" + user.get_farewell_message() + "\r\n");
+        }
     }
 }
 
