@@ -101,6 +101,27 @@ void SrvMgr::mode_l(char plusminus, std::string &mode_arguments, Channel &channe
     }
 }
 
+void    SrvMgr::join_channel(string& chan_name, string& key, User& user) {
+    // Channel name must start with # or &
+    if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&')) {
+        string  err_msg = ":" + server_name_ + " " + ERR_BADCHANNAME + " " + user.get_nickname() + " " + chan_name + " :Channel names must start with '#' or '&'";
+        send_to_one(user, err_msg);
+        return ;
+    }
+    if (server_channels_.find(chan_name) == server_channels_.end()) {
+        server_channels_.emplace(chan_name, Channel(chan_name, user.get_nickname()));
+    }
+    Channel& channel = server_channels_[chan_name];
+    if (!channel.does_key_fit(key)) {
+        string  err_msg = ":" + server_name_ + " " + ERR_BADCHANNELKEY + " " + user.get_nickname() + " " + chan_name + " :Cannot join channel (+k)";
+        send_to_one(user, err_msg);
+        return ;
+    }
+    channel.add_nick(user.get_nickname());
+    send_channel_command_ack(channel, user);
+    send_channel_greetings(channel, user);
+}
+
 void    SrvMgr::send_to_one(const User& user, const std::string& msg) {
     srv_instance_.sendTo(user.get_client(), msg + "\r\n");
 }
@@ -177,13 +198,11 @@ void    SrvMgr::remove_user_from_channel(Channel &channel, std::string &nick) {
     remove_nick_from_channel(channel, nick);
 }
 
-void    SrvMgr::send_channel_command_ack(Channel& channel, const MPlexServer::Client& client, const User& user) {
-    (void)  client;
+void    SrvMgr::send_channel_command_ack(Channel& channel, const User& user) {
     string  ack = ":" + user.get_nickname() + " JOIN :" + channel.get_channel_name();
     send_to_chan_all(channel, ack);
 }
-void    SrvMgr::send_channel_greetings(Channel& channel, const MPlexServer::Client& client, const User& user) {
-    (void)  client;
+void    SrvMgr::send_channel_greetings(Channel& channel, const User& user) {
     string  topic = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + channel.get_channel_name() + " " + channel.get_channel_topic();
     string  name_reply = ":" + server_name_ + " " + RPL_NAMREPLY + " " + user.get_nickname() + " = " + channel.get_channel_name() + " :" + channel.get_user_nicks_str();
     string  end_of_names = ":" + server_name_ + " " + RPL_ENDOFNAMES + " " + user.get_nickname() + " " + channel.get_channel_name() + " :End of /NAMES list.";

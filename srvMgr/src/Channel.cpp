@@ -78,6 +78,9 @@ bool Channel::has_chan_op(const std::string &op) {
 void Channel::set_key(const std::string &key) {
     key_ = key;
 }
+bool    Channel::does_key_fit(const std::string &key) {
+    return key_ == key || key_.empty();
+}
 
 int Channel::get_member_count() const {
     return member_count_;

@@ -98,7 +98,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             process_user(msg_parts[1], client, user);
             break;
         case cmdType::JOIN:
-            process_join(msg_parts[1], client, user);
+            process_join(msg_parts[1], user);
             break;
         case cmdType::PART:
             process_part(msg_parts[1], client, user);
@@ -232,23 +232,17 @@ void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& 
 
 // JOIN <channel>{,<channel>} [<key>{,<key>}]
 // To do: support multiple channels and keys???
-void    SrvMgr::process_join(string s, const MPlexServer::Client& client, User& user) {
-    string chan_name = s;
+void    SrvMgr::process_join(string s, User& user) {
+    string  chan_names = split_off_before_del(s, ' ');
+    string  keys = split_off_before_del(s, ' ');
 
-    // Channel name must start with # or &
-    if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&')) {
-        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_BADCHANNAME + " " + user.get_nickname() + " " + chan_name + " :Channel names must start with '#' or '&'\r\n");
-        return;
+    while (!chan_names.empty()) {
+        string  chan_name = split_off_before_del(chan_names,',');
+        string  key = split_off_before_del(keys,',');
+        join_channel(chan_name, key, user);
     }
-
-    if (server_channels_.find(chan_name) == server_channels_.end()) {
-        server_channels_.emplace(chan_name, Channel(chan_name, user.get_nickname()));
-    }
-    Channel& channel = server_channels_[chan_name];
-    channel.add_nick(user.get_nickname());
-    send_channel_command_ack(channel, client, user);
-    send_channel_greetings(channel, client, user);
 }
+
 
 // KICK <channel> <client> :[<message>]
 // Only channel operators may kick

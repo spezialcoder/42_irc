@@ -29,6 +29,7 @@ public:
     bool                            has_chan_op(const std::string &nick);
 
     void set_key(const std::string &key);
+    bool    does_key_fit(const std::string &key);
     [[nodiscard]] int get_member_count() const;
     [[nodiscard]] int get_member_limit() const;
     void set_member_limit(int member_limit);
