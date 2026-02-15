@@ -362,6 +362,13 @@ void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, 
     }
     Channel& channel = chan_it->second;
 
+    // User must be on the channel
+    if (!channel.has_chan_member(user.get_nickname())) {
+        string err_msg = ":" + server_name_ + " " + ERR_NOTONCHANNEL + " " + user.get_nickname() + " " + chan_name + " :You're not on that channel";
+        send_to_one(user, err_msg);
+        return;
+    }
+
     // If no topic provided, reply with current topic
     if (new_topic.empty()) {
         string topic_msg = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + chan_name + " " + channel.get_channel_topic();
@@ -376,13 +383,10 @@ void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, 
         return;
     }
 
-    // Set new topic and notify channel
+    // Set new topic and notify all users in the channel
     channel.set_channel_topic(new_topic);
-    string topic_set_msg = ":" + user.get_signature() + " TOPIC " + chan_name + " :" + new_topic + "\r\n";
+    string topic_set_msg = ":" + user.get_signature() + " TOPIC " + chan_name + " :" + new_topic;
     send_to_chan_all(channel, topic_set_msg);
-    // Optionally, reply to user
-    string confirm_msg = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + chan_name + " " + new_topic;
-    send_to_one(user.get_nickname(), confirm_msg);
 }
 
 void SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, User& user) {
