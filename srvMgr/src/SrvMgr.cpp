@@ -344,18 +344,44 @@ void    SrvMgr::process_privmsg(std::string s, const MPlexServer::Client& client
         }
     }
 }
-
+// TOPIC <channel> [<topic>]
+// If topic is not given, return current topic. 
+// Only channel operators can set topic if topic_protected mode is enabled.
 void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, User& user) {
-    (void)  client;
-    (void)  user;
-    string  chan_name = split_off_before_del(s, ' ');
-    string  new_topic = split_off_before_del(s, ' ');
-    if (new_topic.empty()) {
-        string  topic = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + chan_name + " " + server_channels_[chan_name].get_channel_topic();
-        send_to_one(user.get_nickname(), topic);
-    } else {
-        server_channels_[chan_name].set_channel_topic(s);
+    string chan_name = split_off_before_del(s, ' ');
+    string new_topic = s;
+    if (!new_topic.empty() && new_topic[0] == ':') new_topic = new_topic.substr(1);
+
+    // Check channel exists
+    auto chan_it = server_channels_.find(chan_name);
+    if (chan_it == server_channels_.end()) {
+        string msg = ":" + server_name_ + " " + ERR_NOSUCHCHANNEL + " " + user.get_nickname() + " " + chan_name + " :No such channel";
+        send_to_one(user, msg);
+        return;
     }
+    Channel& channel = chan_it->second;
+
+    // If no topic provided, reply with current topic
+    if (new_topic.empty()) {
+        string topic_msg = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + chan_name + " " + channel.get_channel_topic();
+        send_to_one(user.get_nickname(), topic_msg);
+        return;
+    }
+
+    // Only channel operators can set topic if topic_protected mode is enabled
+    if (channel.topic_protected() && !channel.has_chan_op(user.get_nickname())) {
+        string err_msg = ":" + server_name_ + " " + ERR_CHANOPRIVSNEEDED + " " + user.get_nickname() + " " + chan_name + " :You're not channel operator";
+        send_to_one(user, err_msg);
+        return;
+    }
+
+    // Set new topic and notify channel
+    channel.set_channel_topic(new_topic);
+    string topic_set_msg = ":" + user.get_signature() + " TOPIC " + chan_name + " :" + new_topic + "\r\n";
+    send_to_chan_all(channel, topic_set_msg);
+    // Optionally, reply to user
+    string confirm_msg = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + chan_name + " " + new_topic;
+    send_to_one(user.get_nickname(), confirm_msg);
 }
 
 void SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, User& user) {
