@@ -48,13 +48,18 @@ void    SrvMgr::onDisconnect(MPlexServer::Client client) {
 
 
     server_users_.erase(client.getFd());
-    server_nicks_.erase(nick);
+    if (nick.empty()) {
+        nick = "unregistered user";
+    } else {
+        server_nicks_.erase(nick);
+    }
 
     // Broadcast QUIT message in IRC format
     if (user.get_farewell_message().empty()) {
         srv_instance_.broadcast(":" + nick + " QUIT :Client disconnected\r\n");
     } else {
-        srv_instance_.broadcast(":" + nick + " " + user.get_farewell_message() + "\r\n");
+        cout << ":" + nick + " QUIT " + user.get_farewell_message() << endl;
+        srv_instance_.broadcast(":" + nick + " QUIT " + user.get_farewell_message() + "\r\n");
     }
 }
 
@@ -105,6 +110,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             process_topic(msg_parts[1], client, user);
             break;
         case cmdType::MODE:
+            process_mode(msg_parts[1], client, user);
             break;
         case cmdType::INVITE:
             break;
@@ -392,27 +398,40 @@ void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, 
 void SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, User& user) {
     (void)  client;
     (void)  user;
+
     string  target = split_off_before_del(s, ' ');          // must be a channel (as per the subject file)
     string  modestring = split_off_before_del(s, ' ');      // +-itkol
     string  mode_arguments = split_off_before_del(s, ' ');  // only for +kol-o
-    // char    plusminus;
+    char    plusminus;
+
+    auto it = server_channels_.find(target);
+    if (it == server_channels_.end()) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NOSUCHCHANNEL + " " + user.get_nickname() + " MODE :No such channel";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
+    Channel&    channel = it->second;
+
+    if (!channel.has_chan_op(user.get_nickname())) {
+        string  err_msg = ":" + server_name_ + " " + ERR_CHANOPRIVSNEEDED + " " + user.get_nickname() + " MODE :You're not a channel operator";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
 
     if (modestring[0] != '-' && modestring[0] != '+') {
-        string  topic = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " MODE :Not enough parameters";
-        send_to_one(user.get_nickname(), topic);
+        string  err_msg = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " MODE :Not enough parameters";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
     }
-    // for (char m : modestring) {
-    //     if (m == '-') plusminus = m;
-    //     if (m == '+') plusminus = m;
-    //     if (m == 'i') mode_i(plusminus, mode_arguments, user);
-    //     if (m == 't') mode_t(plusminus, mode_arguments, user);
-    //     if (m == 'k') mode_k(plusminus, mode_arguments, TODO, user);
-    //     if (m == 'o') mode_o(plusminus, mode_arguments, user);
-    //     if (m == 'l') mode_l(plusminus, mode_arguments, user);
-    // }
-
-
-
+    for (char m : modestring) {
+        if (m == '-') plusminus = m;
+        if (m == '+') plusminus = m;
+    //     if (m == 'i') mode_i(plusminus, mode_arguments, channel, user);
+        if (m == 't') mode_t(plusminus, mode_arguments, channel, user);
+        if (m == 'k') mode_k(plusminus, mode_arguments, channel, user);
+        if (m == 'o') mode_o(plusminus, mode_arguments, channel, user);
+        if (m == 'l') mode_l(plusminus, mode_arguments, channel, user);
+    }
 }
 
 void    SrvMgr::process_quit(string s, const MPlexServer::Client &client, User& user) {

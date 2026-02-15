@@ -31,6 +31,76 @@ void    SrvMgr::try_to_log_in(User &user, const MPlexServer::Client &client) con
     srv_instance_.sendTo(client, ":" + server_name_ + " " + RPL_MYINFO + " " + nick + " :server 1.0 o o\r\n");
 }
 
+void SrvMgr::mode_t(char plusminus, std::string &mode_arguments, Channel &channel, User &user) {
+    (void)  mode_arguments;
+    if (plusminus == '-') {
+        channel.set_topic_protected(false);
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " -t";
+        send_to_chan_all(channel, msg);
+    } else if (plusminus == '+') {
+        channel.set_topic_protected(true);
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " +t";
+        send_to_chan_all(channel, msg);
+    }
+}
+void SrvMgr::mode_k(char plusminus, std::string &mode_arguments, Channel &channel, User &user) {
+    std::string key = split_off_before_del(mode_arguments,' ');
+    if (key.empty()) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " MODE :Not enough parameters";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
+    if (plusminus == '-') {
+        channel.set_key("");
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " -k *";
+        send_to_chan_all(channel, msg);
+    } else if (plusminus == '+') {
+        channel.set_key(key);
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " +k " + key;
+        send_to_chan_all(channel, msg);
+    }
+}
+void SrvMgr::mode_o(char plusminus, std::string &mode_arguments, Channel &channel, User &user) {
+    std::string target_nick = split_off_before_del(mode_arguments,' ');
+    if (target_nick.empty()) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " MODE :Not enough parameters";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
+    if (!channel.has_chan_member(target_nick)) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NOSUCHNICK + " " + user.get_nickname() + " MODE :No such nick";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
+    if (plusminus == '-') {
+        channel.remove_operator(target_nick);
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " +o " + target_nick;
+        send_to_chan_all(channel, msg);
+    } else if (plusminus == '+') {
+        channel.add_operator(target_nick);
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " +o " + target_nick;
+        send_to_chan_all(channel, msg);
+    }
+}
+void SrvMgr::mode_l(char plusminus, std::string &mode_arguments, Channel &channel, User &user) {
+    if (plusminus == '-') {
+        channel.set_member_limit(0);
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " -l ";
+        send_to_chan_all(channel, msg);
+    } else if (plusminus == '+') {
+        std::string limit_str = split_off_before_del(mode_arguments,' ');
+        if (limit_str.empty()) {
+            string  err_msg = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " MODE :Not enough parameters";
+            send_to_one(user.get_nickname(), err_msg);
+            return ;
+        }
+        int         limit = atoi(limit_str.c_str());
+        channel.set_member_limit(limit);
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " +l " + limit_str;
+        send_to_chan_all(channel, msg);
+    }
+}
+
 void    SrvMgr::send_to_one(const User& user, const std::string& msg) {
     srv_instance_.sendTo(user.get_client(), msg + "\r\n");
 }
