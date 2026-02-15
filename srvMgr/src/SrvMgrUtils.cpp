@@ -178,7 +178,7 @@ void    SrvMgr::change_nick_in_channel(const std::string &new_nick, const std::s
     string old_signature = server_users_[server_nicks_[old_nick]].get_signature();
     if (channel.has_chan_op(old_nick)) {
         channel.remove_operator(old_nick);
-        channel.add_nick(new_nick);
+        channel.add_operator(new_nick);
     }
     if (channel.has_chan_member(old_nick)) {
         channel.remove_nick(old_nick);
