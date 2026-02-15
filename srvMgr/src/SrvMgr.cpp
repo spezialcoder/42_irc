@@ -285,7 +285,7 @@ void    SrvMgr::process_part(string s, const MPlexServer::Client& client, User& 
     string  nick = user.get_nickname();
 
     string chan_name = split_off_before_del(s, ' ');
-    string reason = split_off_before_del(s, ' ');
+    string reason = s;
 
     if (server_channels_.find(chan_name) == server_channels_.end()) {
         string msg = ":" + server_name_ + " " + ERR_NOSUCHCHANNEL + " " + user.get_nickname() + " " + chan_name + " :No such channel";
