@@ -31,6 +31,7 @@ public:
     void    process_privmsg(std::string, const MPlexServer::Client&, User&);
     void    process_topic(std::string, const MPlexServer::Client&, User&);
     void    process_mode(std::string, const MPlexServer::Client&, User&);
+    void    process_kick(std::string, const MPlexServer::Client&, User&);
     void    process_quit(std::string, const MPlexServer::Client&, User&);
     void    pong(const std::string &, const MPlexServer::Client &, const User&);
 

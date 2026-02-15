@@ -109,6 +109,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
         case cmdType::INVITE:
             break;
         case cmdType::KICK:
+            process_kick(msg_parts[1], client, user);
             break;
         case cmdType::QUIT:
             process_quit(msg_parts[1], client, user);
@@ -223,8 +224,16 @@ void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& 
     }
 }
 
+// JOIN <channel>{,<channel>} [<key>{,<key>}]
+// To do: support multiple channels and keys???
 void    SrvMgr::process_join(string s, const MPlexServer::Client& client, User& user) {
-	string chan_name = s;
+    string chan_name = s;
+
+    // Channel name must start with # or &
+    if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&')) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_BADCHANNAME + " " + user.get_nickname() + " " + chan_name + " :Channel names must start with '#' or '&'\r\n");
+        return;
+    }
 
     if (server_channels_.find(chan_name) == server_channels_.end()) {
         server_channels_.emplace(chan_name, Channel(chan_name, user.get_nickname()));
@@ -233,6 +242,42 @@ void    SrvMgr::process_join(string s, const MPlexServer::Client& client, User& 
     channel.add_nick(user.get_nickname());
     send_channel_command_ack(channel, client, user);
     send_channel_greetings(channel, client, user);
+}
+
+// KICK <channel> <client> :[<message>]
+// Only channel operators may kick
+void SrvMgr::process_kick(std::string s, const MPlexServer::Client& client, User& user) {
+    string chan_name = split_off_before_del(s, ' ');
+    string target_nick = split_off_before_del(s, ' ');
+    string message = s;
+    if (!message.empty() && message[0] == ':') message = message.substr(1);
+
+    // Check channel exists
+    auto chan_it = server_channels_.find(chan_name);
+    if (chan_it == server_channels_.end()) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NOSUCHCHANNEL + " " + user.get_nickname() + " " + chan_name + " :No such channel\r\n");
+        return;
+    }
+    Channel& channel = chan_it->second;
+
+    // Check user is channel operator
+    if (!channel.has_chan_op(user.get_nickname())) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_CHANOPRIVSNEEDED + " " + user.get_nickname() + " " + chan_name + " :You're not channel operator\r\n");
+        return;
+    }
+
+    // Check target is in channel
+    if (!channel.has_chan_member(target_nick)) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_USERNOTINCHANNEL + " " + user.get_nickname() + " " + target_nick + " " + chan_name + " :They aren't on that channel\r\n");
+        return;
+    }
+
+    // Compose KICK message
+    string kick_msg = ":" + user.get_signature() + " KICK " + chan_name + " " + target_nick + " :" + (message.empty() ? user.get_nickname() : message) + "\r\n";
+    send_to_chan_all(channel, kick_msg);
+
+    // Remove user from channel
+    remove_user_from_channel(channel, target_nick);
 }
 
 void    SrvMgr::process_part(string s, const MPlexServer::Client& client, User& user) {

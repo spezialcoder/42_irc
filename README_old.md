@@ -18,9 +18,9 @@ cd 42_IRC
 make
 
 # 5. Open firewall port
-sudo ufw allow 7850/tcp
+sudo ufw allow ####/tcp
 
-# 6. Run server (use screen/tmux to keep it running)
+# 6. Run server (use screen/tmux to keep it running or just leave terminal window open)
 screen -S irc
 ./ircserv
 # Press Ctrl+A then D to detach
