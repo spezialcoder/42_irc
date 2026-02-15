@@ -129,7 +129,12 @@ The server prints status and debug info to the console:
 - Add SSL/TLS support
 - Build a web-based IRC client
 - Experiment with bots or automation
+
+## 📚 Resources
 - https://modern.ircdocs.horse/ Modern IRC Documentation
+- https://tools.ietf.org/html/rfc1459 RFC 1459 - Internet Relay Chat Protocol
+- https://en.wikipedia.org/wiki/List_of_IRC_commands - List of IRC Commands
+- various AI assistants were used to help us understand the protocol, test for compliance, and brainstorm features. We also used them to generate some of the documentation design and comments in the code.
 
 ---
 

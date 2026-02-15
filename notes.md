@@ -8,17 +8,25 @@ This document provides a step-by-step guide to deploying the 42_IRC server on a 
 
 todo:
 
-- implementieren /kick --> Matthias
-- implementieren /topic --> Daniel 
-- topic neu setzen nur, wenn der channel das erlaubt (mode -t --> sonst nur operatoren erlaubt) --> Matthias
-- implementieren /mode --> Daniel
-- implementieren /invite --> Daniel
-- sanitzing channel namen - &/# sind als erstes Zeichen Bedingung
-- /JOIN erweitern? Befehl auf mehrere argumente erweitern? /join #channel1,#channel2,#channel3 --> Matthias
-- /MODE string plus parameters? mode k --> siehe nächster punkt
-- /KEY pro channel?
-- Dazu REGEX??? Oder lieber über c++ (Daniel: c++)
-- Livetest mit allen 1h
+done - implementieren /kick --> Matthias 
+done - implementieren /topic --> Matthias
+done - topic neu setzen nur, wenn der channel das erlaubt (mode -t --> sonst nur operatoren erlaubt) --> Matthias
+almost done - implementieren /mode --> Daniel
+done - sanitzing channel namen - &/# sind als erstes Zeichen Bedingung --> Matthias
+done - /JOIN erweitern? Befehl auf mehrere argumente erweitern? /join #channel1,#channel2,#channel3 --> Matthias
+almost all done - /MODE string plus parameters? mode k --> siehe nächster punkt
+done - /KEY pro channel?
+done - Livetest mit allen 1h
+done - channel limit? mode +l --> Daniel
+done - mode +o funktioniert nicht? Operatorrechte wegnehmen ist nun das Thema, nachträglich verliehene werden auch noch nicht überall erkannt
+
+- netcat behaviour!!! --> Lewin
+- mehrere flags zugleich? bsp: /mode #channel +nt --> Daniel
+- resources angeben!! auch KI Nutzung - Abgleich mit Protokollverhalten... --> Matthias, Daniel, Lewin
+- server debug session starten, nochmal mit valgrind... --> Lewin
+- graceful shutdown verbessern? --> Lewin
+- implementieren: invite --> Daniel
+
 
 
 
