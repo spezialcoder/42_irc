@@ -348,6 +348,7 @@ void    SrvMgr::process_privmsg(std::string s, const MPlexServer::Client& client
 // If topic is not given, return current topic. 
 // Only channel operators can set topic if topic_protected mode is enabled.
 void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, User& user) {
+    (void) client;
     string chan_name = split_off_before_del(s, ' ');
     string new_topic = s;
     if (!new_topic.empty() && new_topic[0] == ':') new_topic = new_topic.substr(1);
