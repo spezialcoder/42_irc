@@ -117,6 +117,11 @@ void    SrvMgr::join_channel(string& chan_name, string& key, User& user) {
         send_to_one(user, err_msg);
         return ;
     }
+    if (channel.get_member_count() >= channel.get_member_limit() && !channel.get_member_limit() == 0) {
+        string  err_msg = ":" + server_name_ + " " + ERR_CHANNELISFULL + " " + user.get_nickname() + " " + chan_name + " :Cannot join channel (+l)";
+        send_to_one(user, err_msg);
+        return ;
+    }
     channel.add_nick(user.get_nickname());
     send_channel_command_ack(channel, user);
     send_channel_greetings(channel, user);
