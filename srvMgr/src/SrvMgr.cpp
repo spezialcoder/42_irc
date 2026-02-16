@@ -19,16 +19,16 @@ using std::string;
 //
 //          -kick
 //          -topic          - RPL_NOTOPIC
-//          -invite
-//          -mode
+//          -mode           SHOULD send RPL_CREATIONTIME
 //          -nick
 //          -join:
-//                  needs creation time
+//                  needs creation time, a UNIX timestamp
 //          -quit           - sending to channels only instead of broadcast
 //          -user           - ERR_ALREADYREGISTERED
 //          -part
 //
 // done:    -ping
+//          -invite
 //
 
 SrvMgr::SrvMgr(MPlexServer::Server& srv, const string& server_password, const string& server_name) : srv_instance_(srv), server_password_(server_password), server_name_(server_name) {
@@ -435,12 +435,17 @@ void    SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, U
     }
     for (char m : modestring) {
         if (m == '-') plusminus = m;
-        if (m == '+') plusminus = m;
-        if (m == 'i') mode_i(plusminus, mode_arguments, channel, user);
-        if (m == 't') mode_t(plusminus, mode_arguments, channel, user);
-        if (m == 'k') mode_k(plusminus, mode_arguments, channel, user);
-        if (m == 'o') mode_o(plusminus, mode_arguments, channel, user);
-        if (m == 'l') mode_l(plusminus, mode_arguments, channel, user);
+        else if (m == '+') plusminus = m;
+        else if (m == 'i') mode_i(plusminus, mode_arguments, channel, user);
+        else if (m == 't') mode_t(plusminus, mode_arguments, channel, user);
+        else if (m == 'k') mode_k(plusminus, mode_arguments, channel, user);
+        else if (m == 'o') mode_o(plusminus, mode_arguments, channel, user);
+        else if (m == 'l') mode_l(plusminus, mode_arguments, channel, user);
+        else {
+            string  err_msg = ":" + server_name_ + " " + ERR_UMODEUNKNOWNFLAG + " " + user.get_nickname() + " :Unknown MODE flag";
+            send_to_one(user.get_nickname(), err_msg);
+            return ;
+        }
     }
 }
 
