@@ -15,17 +15,15 @@ using std::string;
 // to do :  argv and arc
 //          handle ctrl+C to exit gracefully
 //
-//          quit: if logged in erase from channels
 //
 //          -kick
 //          -topic          - RPL_NOTOPIC
-//          -nick
-//          -join:
-//                  needs creation time, a UNIX timestamp
-//          -user           - ERR_ALREADYREGISTERED
+//          -join:              needs creation time, a UNIX timestamp
 //
 // done:    -ping
 //          -invite
+//          -nick
+//          -user
 //          -part
 //          -mode           SHOULD send RPL_CREATIONTIME
 //          -quit           - sending to channels only instead of broadcast
@@ -182,7 +180,11 @@ void    SrvMgr::process_nick(const string& s, const MPlexServer::Client& client,
 
 	if (!user.is_logged_in()) {
 		old_nick = "*";
-}
+	}
+    if (s.empty()) {
+        srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NONICKNAMEGIVEN + " " + old_nick + " :No nickname given\r\n");
+        return ;
+    }
     if (s.find_first_of("#&:; ") != s.npos) {
         srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_ERRONEUSNICKNAME + " " + old_nick + " " + s + " :Erroneous nickname, it may not contain \"#:; \"\r\n");
         return ;

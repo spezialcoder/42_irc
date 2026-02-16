@@ -26,7 +26,7 @@
 
 ### JOIN - Join a Channel
 ```
-/join <#channel>
+/join <#channel1>,<#channel2> key1
 ```
 **Example:**
 ```
@@ -42,12 +42,14 @@
 **Example:**
 ```
 /part #general Goodbye!
+/part Ciao!                     # when inside a channel
 /part
 ```
 
 ### TOPIC - View/Set Channel Topic
 ```
 /topic [#channel] [new topic]
+/topic [new topic]              # when inside a channel
 ```
 **Examples:**
 ```
@@ -73,6 +75,7 @@
 ```
 /kick #general bob Spamming
 /kick #general alice
+/kick alice                     # when inside a channel
 ```
 **Note:** Requires channel operator privileges
 
@@ -94,17 +97,18 @@
 
 **Examples:**
 ```
-/mode #general                  # View current modes
-/mode #general +i               # Enable invite-only
-/mode #general -i               # Disable invite-only
-/mode #general +t               # Protect topic (ops only)
-/mode #general +k secret123     # Set channel password
-/mode #general -k               # Remove password
-/mode #general +o alice         # Give alice operator status
-/mode #general -o alice         # Remove alice's operator status
-/mode #general +l 50            # Set user limit to 50
-/mode #general -l               # Remove user limit
-/mode #general +it              # Enable multiple modes at once
+/mode #general                          # View current modes
+/mode #general +i                       # Enable invite-only
+/mode #general -i                       # Disable invite-only
+/mode #general +t                       # Protect topic (ops only)
+/mode #general +k secret123             # Set channel password
+/mode #general -k secret123             # Remove password
+/mode #general +o alice                 # Give alice operator status
+/mode #general -o alice                 # Remove alice's operator status
+/mode #general +l 50                    # Set user limit to 50
+/mode #general -l                       # Remove user limit
+/mode #general +itko secretKey nick     # Enable multiple modes at once
+/mode +itko secretKey nick              # when inside a channel, enable multiple modes at once
 ```
 
 ---
