@@ -17,20 +17,18 @@ using std::string;
 //
 //          quit: if logged in erase from channels
 //
-//          -join:  what if password is given or required?
-//                  what if multiple channels should be created?
-//                  chan names should only start with & or #
-//                  needs creation time
 //          -kick
+//          -topic          - RPL_NOTOPIC
 //          -invite
 //          -mode
-//
-// done:    -ping
-// unless   -topic          - RPL_NOTOPIC
-// farming  -nick
-// lines    -quit           - sending to channels only instead of broadcast
+//          -nick
+//          -join:
+//                  needs creation time
+//          -quit           - sending to channels only instead of broadcast
 //          -user           - ERR_ALREADYREGISTERED
 //          -part
+//
+// done:    -ping
 //
 
 SrvMgr::SrvMgr(MPlexServer::Server& srv, const string& server_password, const string& server_name) : srv_instance_(srv), server_password_(server_password), server_name_(server_name) {
