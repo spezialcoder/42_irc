@@ -28,6 +28,8 @@ public:
     bool                            has_chan_member(const std::string &nick);
     bool                            has_chan_op(const std::string &nick);
 
+    std::string                     get_modes() const;
+
     void set_key(const std::string &key);
     bool    does_key_fit(const std::string &key);
     [[nodiscard]] int get_member_count() const;

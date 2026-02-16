@@ -31,6 +31,7 @@ public:
     void    process_privmsg(std::string, const MPlexServer::Client&, User&);
     void    process_topic(std::string, const MPlexServer::Client&, User&);
     void    process_mode(std::string, const MPlexServer::Client&, User&);
+    void    process_invite(std::string, const MPlexServer::Client&, User&);
     void    process_kick(std::string, const MPlexServer::Client&, User&);
     void    process_quit(std::string, const MPlexServer::Client&, User&);
     void    pong(const std::string &, const MPlexServer::Client &, const User&);
@@ -66,6 +67,10 @@ private:
 
     void    send_channel_command_ack(Channel&, const User&);
     void    send_channel_greetings(Channel&, const User&);
+
+    bool    nick_exists(std::string& nick);
+    bool    chan_exists(std::string& chan_name);
+
 
     std::vector<MPlexServer::Client>    create_client_vector(const std::unordered_set<std::string>& set_of_nicks) const;
 

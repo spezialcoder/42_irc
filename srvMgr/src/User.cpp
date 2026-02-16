@@ -71,3 +71,18 @@ std::string User::get_hostname() {
 std::string User::get_signature() const {
     return nickname_ + "!" + username_ + "@" + hostname_;
 }
+
+void    User::add_invitation(std::string &chan_name) {
+    channel_invites_.insert(chan_name);
+}
+
+void User::remove_invitation(std::string &chan_name) {
+    channel_invites_.erase(chan_name);
+}
+
+bool User::has_invitation(std::string &chan_name) {
+    if (channel_invites_.find(chan_name) == channel_invites_.end()) {
+        return false;
+    }
+    return true;
+}
