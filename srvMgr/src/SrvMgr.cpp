@@ -19,16 +19,16 @@ using std::string;
 //
 //          -kick
 //          -topic          - RPL_NOTOPIC
-//          -mode           SHOULD send RPL_CREATIONTIME
 //          -nick
 //          -join:
 //                  needs creation time, a UNIX timestamp
-//          -quit           - sending to channels only instead of broadcast
 //          -user           - ERR_ALREADYREGISTERED
-//          -part
 //
 // done:    -ping
 //          -invite
+//          -part
+//          -mode           SHOULD send RPL_CREATIONTIME
+//          -quit           - sending to channels only instead of broadcast
 //
 
 SrvMgr::SrvMgr(MPlexServer::Server& srv, const string& server_password, const string& server_name) : srv_instance_(srv), server_password_(server_password), server_name_(server_name) {
@@ -188,7 +188,7 @@ void    SrvMgr::process_nick(const string& s, const MPlexServer::Client& client,
         return ;
 	} else {
 		new_nick = s;
-    }
+ }
     if (server_nicks_.find(new_nick) != server_nicks_.end()) {
         srv_instance_.sendTo(client, ":" + server_name_ + " " + ERR_NICKNAMEINUSE + " " + old_nick + " " + new_nick + " :Nickname is already in use\r\n");
     } else {
@@ -293,6 +293,12 @@ void    SrvMgr::process_part(string s, const MPlexServer::Client& client, User& 
     (void)  client;
     string  nick = user.get_nickname();
 
+    if (s.empty()) {
+        string msg = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " PART :Not enough parameters";
+        send_to_one(nick, msg);
+        return ;
+    }
+
     string chan_name = split_off_before_del(s, ' ');
     string reason = s;
 
@@ -301,7 +307,6 @@ void    SrvMgr::process_part(string s, const MPlexServer::Client& client, User& 
         send_to_one(nick, msg);
         return ;
     }
-
     Channel& channel = server_channels_[chan_name];
     if (channel.get_chan_nicks().find(user.get_nickname()) == channel.get_chan_nicks().end()) {
         string msg = ":" + server_name_ + " " + ERR_NOTONCHANNEL + " " + user.get_nickname() + " " + chan_name + " :You're not on that channel";
@@ -404,7 +409,7 @@ void    SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, U
 
     string  target = split_off_before_del(s, ' ');          // must be a channel (as per the subject file)
     string  modestring = split_off_before_del(s, ' ');      // +-itkol
-    string  mode_arguments = split_off_before_del(s, ' ');  // only for +kol-o
+    string  mode_arguments = s;                                 // only for +kol-o
     char    plusminus;
 
     auto it = server_channels_.find(target);
