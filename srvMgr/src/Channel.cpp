@@ -1,11 +1,13 @@
 #include <utility>
 
+#include <ctime>
+
 #include "SrvMgr.h"
 
 Channel::Channel(std::string  chan_name, std::string chan_creator) : chan_name_(std::move(chan_name)) {
     chan_nicks_.insert(chan_creator);
     chan_ops_.insert(chan_creator);
-    // topic_ = "";
+    creation_time_ = std::time(nullptr);
 }
 
 std::string Channel::get_channel_name() {
@@ -108,6 +110,30 @@ bool Channel::needs_invite() const {
 
 void Channel::set_needs_invite(bool needs_invite) {
     needs_invite_ = needs_invite;
+}
+
+std::string Channel::get_creation_time() const {
+    std::stringstream time;
+    time << creation_time_;
+    return time.str();
+}
+
+std::string Channel::get_topic_setter() const {
+    return topic_setter_;
+}
+
+void Channel::set_topic_setter(std::string setter_nick) {
+    topic_setter_ = setter_nick;
+}
+
+std::string Channel::get_topic_set_time() const {
+    std::stringstream time;
+    time << topic_set_time_;
+    return time.str();
+}
+
+void Channel::set_topic_set_time() {
+    topic_set_time_ = std::time(nullptr);
 }
 
 std::string Channel::get_modes() const {

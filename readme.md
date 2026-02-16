@@ -141,7 +141,7 @@ The server prints status and debug info to the console:
 ## 👩‍💻 About
 This project was created as a student exercise in network programming and protocol design. It is intended for learning, experimentation, and as a foundation for more advanced chat systems.
 
-Lewin Sorg, Matthias Naumann, Daniel Spring
+Lewin Sorg, Matthias Naumann, Daniel Springer
 ---
 
 **Happy chatting! 🎉**

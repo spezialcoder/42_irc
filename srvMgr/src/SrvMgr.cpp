@@ -15,17 +15,16 @@ using std::string;
 // to do :  argv and arc
 //          handle ctrl+C to exit gracefully
 //
-//
 //          -kick
-//          -topic          - RPL_NOTOPIC
-//          -join:              needs creation time, a UNIX timestamp
 //
 // done:    -ping
+//          -topic
+//          -join
 //          -invite
 //          -nick
 //          -user
 //          -part
-//          -mode           SHOULD send RPL_CREATIONTIME
+//          -mode
 //          -quit           - sending to channels only instead of broadcast
 //
 
@@ -52,7 +51,7 @@ void    SrvMgr::onDisconnect(MPlexServer::Client client) {
             Channel& channel = channel_it.second;
             if (channel.has_chan_member(nick)) {
                 remove_user_from_channel(channel, nick);
-                string  msg = ":" + user.get_signature() + " QUIT :Quit" + user.get_farewell_message();
+                string  msg = ":" + user.get_signature() + " QUIT :Quit: User disconnected";
                 if (user.get_farewell_message().empty()) {
                     msg = ":" + user.get_signature() + " QUIT :Quit:Client disconnected";
                 }
@@ -244,6 +243,11 @@ void    SrvMgr::process_user(string s, const MPlexServer::Client& client, User& 
 // JOIN <channel>{,<channel>} [<key>{,<key>}]
 // To do: support multiple channels and keys???
 void    SrvMgr::process_join(string s, User& user) {
+    if (s.empty()) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " JOIN :Not enough parameters";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
     string  chan_names = split_off_before_del(s, ' ');
     string  keys = split_off_before_del(s, ' ');
 
@@ -253,7 +257,6 @@ void    SrvMgr::process_join(string s, User& user) {
         join_channel(chan_name, key, user);
     }
 }
-
 
 // KICK <channel> <client> :[<message>]
 // Only channel operators may kick
@@ -365,11 +368,16 @@ void    SrvMgr::process_privmsg(std::string s, const MPlexServer::Client& client
 // Only channel operators can set topic if topic_protected mode is enabled.
 void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, User& user) {
     (void) client;
+    if (s.empty()) {
+        string msg = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " TOPIC :Not enough parameters";
+        send_to_one(user, msg);
+        return;
+    }
+
     string chan_name = split_off_before_del(s, ' ');
     string new_topic = s;
     if (!new_topic.empty() && new_topic[0] == ':') new_topic = new_topic.substr(1);
 
-    // Check channel exists
     auto chan_it = server_channels_.find(chan_name);
     if (chan_it == server_channels_.end()) {
         string msg = ":" + server_name_ + " " + ERR_NOSUCHCHANNEL + " " + user.get_nickname() + " " + chan_name + " :No such channel";
@@ -378,7 +386,6 @@ void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, 
     }
     Channel& channel = chan_it->second;
 
-    // User must be on the channel
     if (!channel.has_chan_member(user.get_nickname())) {
         string err_msg = ":" + server_name_ + " " + ERR_NOTONCHANNEL + " " + user.get_nickname() + " " + chan_name + " :You're not on that channel";
         send_to_one(user, err_msg);
@@ -387,12 +394,19 @@ void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, 
 
     // If no topic provided, reply with current topic
     if (new_topic.empty()) {
-        string topic_msg = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + chan_name + " " + channel.get_channel_topic();
-        send_to_one(user.get_nickname(), topic_msg);
+        string  topic_msg;
+        if (channel.get_channel_topic() == ":") {
+            topic_msg = ":" + server_name_ + " " + RPL_NOTOPIC + " " + user.get_nickname() + " " + chan_name + " :No topic is set";
+            send_to_one(user.get_nickname(), topic_msg);
+        } else {
+            topic_msg = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + chan_name + " " + channel.get_channel_topic();
+            send_to_one(user.get_nickname(), topic_msg);
+            string whotime_msg = ":" + server_name_ + " " + RPL_TOPICWHOTIME + " " + user.get_nickname() + " " + chan_name + " " + channel.get_topic_setter() + " " + channel.get_topic_set_time();
+            send_to_one(user.get_nickname(), whotime_msg);
+        }
         return;
     }
 
-    // Only channel operators can set topic if topic_protected mode is enabled
     if (channel.topic_protected() && !channel.has_chan_op(user.get_nickname())) {
         string err_msg = ":" + server_name_ + " " + ERR_CHANOPRIVSNEEDED + " " + user.get_nickname() + " " + chan_name + " :You're not channel operator";
         send_to_one(user, err_msg);
@@ -401,6 +415,7 @@ void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, 
 
     // Set new topic and notify all users in the channel
     channel.set_channel_topic(new_topic);
+    channel.set_topic_setter(user.get_username());
     string topic_set_msg = ":" + user.get_signature() + " TOPIC " + chan_name + " :" + new_topic;
     send_to_chan_all(channel, topic_set_msg);
 }
@@ -424,7 +439,8 @@ void    SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, U
 
     if (modestring.empty()) {
         string  msg = ":" + server_name_ + " " + RPL_CHANNELMODEIS + " " + user.get_nickname() + " " + channel.get_channel_name() + " " + channel.get_modes();
-        cout << msg << endl;
+        send_to_one(user.get_nickname(), msg);
+        msg = ":" + server_name_ + " " + RPL_CREATIONTIME + " " + user.get_nickname() + " " + channel.get_channel_name() + " " + channel.get_creation_time();
         send_to_one(user.get_nickname(), msg);
         return ;
     }

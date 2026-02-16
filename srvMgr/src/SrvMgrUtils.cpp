@@ -229,12 +229,15 @@ void    SrvMgr::send_channel_command_ack(Channel& channel, const User& user) {
     send_to_chan_all(channel, ack);
 }
 void    SrvMgr::send_channel_greetings(Channel& channel, const User& user) {
-    string  topic = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + channel.get_channel_name() + " " + channel.get_channel_topic();
+    if (channel.get_channel_topic() != ":") {
+        string  topic = ":" + server_name_ + " " + RPL_TOPIC + " " + user.get_nickname() + " " + channel.get_channel_name() + " " + channel.get_channel_topic();
+        string whotime_msg = ":" + server_name_ + " " + RPL_TOPICWHOTIME + " " + user.get_nickname() + " " + channel.get_channel_name() + " " + channel.get_topic_setter() + " " + channel.get_creation_time();
+        send_to_one(user, topic);
+        send_to_one(user.get_nickname(), whotime_msg);
+    }
     string  name_reply = ":" + server_name_ + " " + RPL_NAMREPLY + " " + user.get_nickname() + " = " + channel.get_channel_name() + " :" + channel.get_user_nicks_str();
-    string  end_of_names = ":" + server_name_ + " " + RPL_ENDOFNAMES + " " + user.get_nickname() + " " + channel.get_channel_name() + " :End of /NAMES list.";
-
-    send_to_one(user, topic);
     send_to_one(user, name_reply);
+    string  end_of_names = ":" + server_name_ + " " + RPL_ENDOFNAMES + " " + user.get_nickname() + " " + channel.get_channel_name() + " :End of /NAMES list.";
     send_to_one(user, end_of_names);
 }
 

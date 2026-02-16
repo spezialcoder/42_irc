@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <ctime>
+
 #include "User.h"
 
 class Channel
@@ -30,20 +32,28 @@ public:
 
     std::string                     get_modes() const;
 
-    void set_key(const std::string &key);
-    bool    does_key_fit(const std::string &key);
-    [[nodiscard]] int get_member_count() const;
-    [[nodiscard]] int get_member_limit() const;
-    void set_member_limit(int member_limit);
-    [[nodiscard]] bool topic_protected() const;
-    void set_topic_protected(bool topic_protected);
-    [[nodiscard]] bool needs_invite() const;
-    void set_needs_invite(bool needs_invite);
+    void                            set_key(const std::string &key);
+    bool                            does_key_fit(const std::string &key);
+    int                             get_member_count() const;
+    int                             get_member_limit() const;
+    void                            set_member_limit(int member_limit);
+    bool                            topic_protected() const;
+    void                            set_topic_protected(bool topic_protected);
+    bool                            needs_invite() const;
+    void                            set_needs_invite(bool needs_invite);
+    std::string                     get_creation_time() const;
+    std::string                     get_topic_setter() const;
+    void                            set_topic_setter(std::string setter_nick);
+    std::string                     get_topic_set_time() const;
+    void                            set_topic_set_time();
 
 private:
     std::string                     chan_name_;
+    std::time_t                     creation_time_;
     std::string                     key_{};
     std::string                     topic_{":"};
+    std::string                     topic_setter_{};
+    std::time_t                     topic_set_time_{};
     int                             member_count_{0};
     int                             member_limit_{0};
     bool                            topic_protected_{false};
