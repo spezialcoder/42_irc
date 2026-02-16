@@ -15,6 +15,8 @@ using std::string;
 // to do :  argv and arc
 //          handle ctrl+C to exit gracefully
 //
+//          quit: if logged in erase from channels
+//
 //          -join:  what if password is given or required?
 //                  what if multiple channels should be created?
 //                  chan names should only start with & or #
@@ -23,8 +25,8 @@ using std::string;
 //          -invite
 //          -mode
 //
-// done:    -ping           - ERR_NEEDMOREPARAMS
-// unless   -topic          - RPL_NOTOPIC , only ops can set topic
+// done:    -ping
+// unless   -topic          - RPL_NOTOPIC
 // farming  -nick
 // lines    -quit           - sending to channels only instead of broadcast
 //          -user           - ERR_ALREADYREGISTERED
@@ -50,13 +52,24 @@ void    SrvMgr::onDisconnect(MPlexServer::Client client) {
 
     server_users_.erase(client.getFd());
     if (user.is_logged_in()) {
-        server_nicks_.erase(nick);
-        if (user.get_farewell_message().empty()) {
-            srv_instance_.broadcast(":" + user.get_signature() + " QUIT :Quit:Client disconnected\r\n");
-        } else {
-            cout << ":" + user.get_signature() + " QUIT " + user.get_farewell_message() << endl;
-            srv_instance_.broadcast(":" + user.get_signature() + " QUIT :Quit" + user.get_farewell_message() + "\r\n");
+        for (auto& channel_it : server_channels_) {
+            Channel& channel = channel_it.second;
+            if (channel.has_chan_member(nick)) {
+                remove_user_from_channel(channel, nick);
+                string  msg = ":" + user.get_signature() + " QUIT :Quit" + user.get_farewell_message();
+                if (user.get_farewell_message().empty()) {
+                    msg = ":" + user.get_signature() + " QUIT :Quit:Client disconnected";
+                }
+                send_to_chan_all_but_one(channel, msg, nick);
+            }
         }
+        server_nicks_.erase(nick);
+        // if (user.get_farewell_message().empty()) {
+        //     srv_instance_.broadcast(":" + user.get_signature() + " QUIT :Quit:Client disconnected\r\n");
+        // } else {
+        //     // cout << ":" + user.get_signature() + " QUIT " + user.get_farewell_message() << endl;
+        //     srv_instance_.broadcast(":" + user.get_signature() + " QUIT :Quit" + user.get_farewell_message() + "\r\n");
+        // }
     }
 }
 
@@ -110,6 +123,7 @@ void    SrvMgr::onMessage(const MPlexServer::Message msg) {
             process_mode(msg_parts[1], client, user);
             break;
         case cmdType::INVITE:
+            process_invite(msg_parts[1], client, user);
             break;
         case cmdType::KICK:
             process_kick(msg_parts[1], client, user);
@@ -243,7 +257,7 @@ void    SrvMgr::process_join(string s, User& user) {
 
 // KICK <channel> <client> :[<message>]
 // Only channel operators may kick
-void SrvMgr::process_kick(std::string s, const MPlexServer::Client& client, User& user) {
+void    SrvMgr::process_kick(std::string s, const MPlexServer::Client& client, User& user) {
     string chan_name = split_off_before_del(s, ' ');
     string target_nick = split_off_before_del(s, ' ');
     string message = s;
@@ -386,7 +400,7 @@ void    SrvMgr::process_topic(std::string s, const MPlexServer::Client& client, 
     send_to_chan_all(channel, topic_set_msg);
 }
 
-void SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, User& user) {
+void    SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, User& user) {
     (void)  client;
     (void)  user;
 
@@ -397,14 +411,21 @@ void SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, User
 
     auto it = server_channels_.find(target);
     if (it == server_channels_.end()) {
-        string  err_msg = ":" + server_name_ + " " + ERR_NOSUCHCHANNEL + " " + user.get_nickname() + " MODE :No such channel";
+        string  err_msg = ":" + server_name_ + " " + ERR_NOSUCHCHANNEL + " " + user.get_nickname() + " " + target + " :No such channel";
         send_to_one(user.get_nickname(), err_msg);
         return ;
     }
     Channel&    channel = it->second;
 
+    if (modestring.empty()) {
+        string  msg = ":" + server_name_ + " " + RPL_CHANNELMODEIS + " " + user.get_nickname() + " " + channel.get_channel_name() + " " + channel.get_modes();
+        cout << msg << endl;
+        send_to_one(user.get_nickname(), msg);
+        return ;
+    }
+
     if (!channel.has_chan_op(user.get_nickname())) {
-        string  err_msg = ":" + server_name_ + " " + ERR_CHANOPRIVSNEEDED + " " + user.get_nickname() + " MODE :You're not a channel operator";
+        string  err_msg = ":" + server_name_ + " " + ERR_CHANOPRIVSNEEDED + " " + user.get_nickname() + " " + target + " :You're not a channel operator";
         send_to_one(user.get_nickname(), err_msg);
         return ;
     }
@@ -417,7 +438,7 @@ void SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, User
     for (char m : modestring) {
         if (m == '-') plusminus = m;
         if (m == '+') plusminus = m;
-    //     if (m == 'i') mode_i(plusminus, mode_arguments, channel, user);
+        if (m == 'i') mode_i(plusminus, mode_arguments, channel, user);
         if (m == 't') mode_t(plusminus, mode_arguments, channel, user);
         if (m == 'k') mode_k(plusminus, mode_arguments, channel, user);
         if (m == 'o') mode_o(plusminus, mode_arguments, channel, user);
@@ -425,12 +446,57 @@ void SrvMgr::process_mode(std::string s, const MPlexServer::Client& client, User
     }
 }
 
+void    SrvMgr::process_invite(std::string s, const MPlexServer::Client &client, User &user) {
+    (void)  client;
+    string  target_nick = split_off_before_del(s, ' ');
+    string  target_chan = split_off_before_del(s, ' ');
+
+    auto it = server_channels_.find(target_chan);
+    if (it == server_channels_.end()) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NOSUCHCHANNEL + " " + user.get_nickname() + " " + target_chan + " :No such channel";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
+    Channel&    channel = it->second;
+    if (!nick_exists(target_nick)) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NOSUCHNICK + " " + user.get_nickname() + " " + target_nick + " :No such nick";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
+    if (!channel.has_chan_member(user.get_nickname())) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NOTONCHANNEL + " " + user.get_nickname() + " " + target_chan + " :You're not on that channel";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
+    if (!channel.has_chan_op(user.get_nickname()) && channel.needs_invite()) {
+        string  err_msg = ":" + server_name_ + " " + ERR_CHANOPRIVSNEEDED + " " + user.get_nickname() + " " + target_chan + " :You're not channel operator";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
+    if (channel.has_chan_member(target_nick)) {
+        string  err_msg = ":" + server_name_ + " " + ERR_USERONCHANNEL + " " + user.get_nickname() + " " + target_nick + " " + target_chan + " :is already on channel";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
+    User& target_user = server_users_.find(server_nicks_.find(target_nick)->second)->second;
+    target_user.add_invitation(target_chan);
+    string  msg = ":" + server_name_ + " " + RPL_INVITING + " " + user.get_nickname() + " " + target_nick + " " + target_chan;
+    send_to_one(user.get_nickname(), msg);
+    msg = ":" + user.get_signature() + " INVITE " + target_nick + " " + target_chan;
+    send_to_one(target_nick, msg);
+}
+
 void    SrvMgr::process_quit(string s, const MPlexServer::Client &client, User& user) {
 	user.set_farewell_message(s);
 	srv_instance_.disconnectClient(client);
 }
 
-void    SrvMgr::pong(const string &s, const MPlexServer::Client &client, const User&) {
+void    SrvMgr::pong(const string &s, const MPlexServer::Client &client, const User& user) {
+    if (s.empty()) {
+        string  err_msg = ":" + server_name_ + " " + ERR_NEEDMOREPARAMS + " " + user.get_nickname() + " PING :Not enough parameters";
+        send_to_one(user.get_nickname(), err_msg);
+        return ;
+    }
     string nick = server_users_[client.getFd()].get_nickname();
     srv_instance_.sendTo(client, ":" + server_name_ + " PONG " + server_name_ + " " + s + "\r\n");
     cout << ":" + server_name_ + " PONG " + server_name_ + " :" + s << endl;

@@ -37,6 +37,9 @@ public:
     void                        set_cap_negotiation_ended(bool cap_negotiation_ended);
     [[nodiscard]] bool          cap_negotiation_started() const;
     void                        set_cap_negotiation_started(bool cap_negotiation_started);
+    void                        add_invitation(std::string& chan_name);
+    void                        remove_invitation(std::string& chan_name);
+    bool                        has_invitation(std::string& chan_name);
 
 private:
     MPlexServer::Client             client_{};
@@ -47,6 +50,6 @@ private:
     std::string                     nickname_{};
     std::string                     username_{};
     std::string                     hostname_{};
-    // std::unordered_set<std::string> channel_names_{};
+    std::unordered_set<std::string> channel_invites_{};
     std::string                     farewell_message_{};
 };

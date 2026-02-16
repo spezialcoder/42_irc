@@ -109,3 +109,16 @@ bool Channel::needs_invite() const {
 void Channel::set_needs_invite(bool needs_invite) {
     needs_invite_ = needs_invite;
 }
+
+std::string Channel::get_modes() const {
+    std::string modes = "+";
+    if (needs_invite_) modes += "i";
+    if (topic_protected_) modes += "t";
+    if (!key_.empty()) modes += "k";
+    if (member_limit_ != 0) modes += "l";
+    modes += " ";
+    if (!key_.empty()) modes += "secretKey ";
+    if (member_limit_ != 0) modes += std::to_string(member_limit_) + " ";
+
+    return modes;
+}

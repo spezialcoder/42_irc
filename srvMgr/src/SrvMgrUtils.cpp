@@ -31,6 +31,18 @@ void    SrvMgr::try_to_log_in(User &user, const MPlexServer::Client &client) con
     srv_instance_.sendTo(client, ":" + server_name_ + " " + RPL_MYINFO + " " + nick + " :server 1.0 o o\r\n");
 }
 
+void SrvMgr::mode_i(char plusminus, std::string &mode_arguments, Channel &channel, User &user) {
+    (void)  mode_arguments;
+    if (plusminus == '-') {
+        channel.set_needs_invite(false);
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " -i";
+        send_to_chan_all(channel, msg);
+    } else if (plusminus == '+') {
+        channel.set_needs_invite(true);
+        std::string msg = ":" + user.get_signature() + " MODE " + channel.get_channel_name() + " +i";
+        send_to_chan_all(channel, msg);
+    }
+}
 void SrvMgr::mode_t(char plusminus, std::string &mode_arguments, Channel &channel, User &user) {
     (void)  mode_arguments;
     if (plusminus == '-') {
@@ -104,7 +116,7 @@ void SrvMgr::mode_l(char plusminus, std::string &mode_arguments, Channel &channe
 void    SrvMgr::join_channel(string& chan_name, string& key, User& user) {
     // Channel name must start with # or &
     if (chan_name.empty() || (chan_name[0] != '#' && chan_name[0] != '&')) {
-        string  err_msg = ":" + server_name_ + " " + ERR_BADCHANNAME + " " + user.get_nickname() + " " + chan_name + " :Channel names must start with '#' or '&'";
+        string  err_msg = ":" + server_name_ + " " + ERR_BADCHANMASK + " " + user.get_nickname() + " " + chan_name + " :Bad Channel Mask. Names must start with '#' or '&'";
         send_to_one(user, err_msg);
         return ;
     }
@@ -121,6 +133,15 @@ void    SrvMgr::join_channel(string& chan_name, string& key, User& user) {
         string  err_msg = ":" + server_name_ + " " + ERR_CHANNELISFULL + " " + user.get_nickname() + " " + chan_name + " :Cannot join channel (+l)";
         send_to_one(user, err_msg);
         return ;
+    }
+    if (channel.needs_invite()) {
+        if (!user.has_invitation(chan_name)){
+            string  err_msg = ":" + server_name_ + " " + ERR_INVITEONLYCHAN + " " + user.get_nickname() + " " + chan_name + " :Cannot join channel (+i)";
+            send_to_one(user, err_msg);
+            return ;
+        } else {
+            user.remove_invitation(chan_name);
+        }
     }
     channel.add_nick(user.get_nickname());
     send_channel_command_ack(channel, user);
@@ -215,6 +236,19 @@ void    SrvMgr::send_channel_greetings(Channel& channel, const User& user) {
     send_to_one(user, topic);
     send_to_one(user, name_reply);
     send_to_one(user, end_of_names);
+}
+
+bool    SrvMgr::nick_exists(std::string &nick) {
+     if (server_nicks_.find(nick) == server_nicks_.end()) {
+         return false;
+     }
+    return true;
+}
+bool    SrvMgr::chan_exists(std::string &chan_name) {
+    if (server_channels_.find(chan_name) == server_channels_.end()) {
+        return false;
+    }
+    return true;
 }
 
 std::vector<MPlexServer::Client>    SrvMgr::create_client_vector(const std::unordered_set<std::string>& set_of_nicks) const {
