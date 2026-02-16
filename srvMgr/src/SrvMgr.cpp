@@ -15,9 +15,8 @@ using std::string;
 // to do :  argv and arc
 //          handle ctrl+C to exit gracefully
 //
-//          -kick
-//
 // done:    -ping
+//          -kick
 //          -topic
 //          -join
 //          -invite
@@ -44,28 +43,25 @@ void    SrvMgr::onDisconnect(MPlexServer::Client client) {
     cout << "[DISCONNECT] " << nick << " (" << client.getIpv4() << ":" << client.getPort() << ") left" << endl;
 
 
-
-    server_users_.erase(client.getFd());
     if (user.is_logged_in()) {
-        for (auto& channel_it : server_channels_) {
-            Channel& channel = channel_it.second;
+        std::vector<string> keys;
+        for (const auto& pair : server_channels_) {
+            keys.push_back(pair.first);
+        }
+        for (const auto& key : keys) {
+            const auto& it = server_channels_.find(key);
+            if (it == server_channels_.end()) continue;
+            Channel& channel = it->second;
+
             if (channel.has_chan_member(nick)) {
                 remove_user_from_channel(channel, nick);
                 string  msg = ":" + user.get_signature() + " QUIT :Quit: User disconnected";
-                if (user.get_farewell_message().empty()) {
-                    msg = ":" + user.get_signature() + " QUIT :Quit:Client disconnected";
-                }
                 send_to_chan_all_but_one(channel, msg, nick);
             }
         }
         server_nicks_.erase(nick);
-        // if (user.get_farewell_message().empty()) {
-        //     srv_instance_.broadcast(":" + user.get_signature() + " QUIT :Quit:Client disconnected\r\n");
-        // } else {
-        //     // cout << ":" + user.get_signature() + " QUIT " + user.get_farewell_message() << endl;
-        //     srv_instance_.broadcast(":" + user.get_signature() + " QUIT :Quit" + user.get_farewell_message() + "\r\n");
-        // }
     }
+    server_users_.erase(client.getFd());
 }
 
 void    SrvMgr::onMessage(const MPlexServer::Message msg) {
