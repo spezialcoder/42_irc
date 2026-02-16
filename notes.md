@@ -19,13 +19,14 @@ done - /KEY pro channel?
 done - Livetest mit allen 1h
 done - channel limit? mode +l --> Daniel
 done - mode +o funktioniert nicht? Operatorrechte wegnehmen ist nun das Thema, nachträglich verliehene werden auch noch nicht überall erkannt
+almost done - netcat behaviour!!! --> Lewin, vielleicht 
 
-- netcat behaviour!!! --> Lewin
 - mehrere flags zugleich? bsp: /mode #channel +nt --> Daniel
 - resources angeben!! auch KI Nutzung - Abgleich mit Protokollverhalten... --> Matthias, Daniel, Lewin
 - server debug session starten, nochmal mit valgrind... --> Lewin
 - graceful shutdown verbessern? --> Lewin
 - implementieren: invite --> Daniel
+- shell-script zum neustarten des servers --> Matthias
 
 
 
