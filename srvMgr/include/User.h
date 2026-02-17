@@ -1,7 +1,3 @@
-//
-// Created by daspring on 2/9/26.
-//
-
 #pragma once
 
 #include <unordered_set>

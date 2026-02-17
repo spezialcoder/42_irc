@@ -8,7 +8,6 @@
 #include "User.h"
 #include "mplexserver.h"
 
-
 /**
  * @brief Class to manage channels, users and their capabilities
 */

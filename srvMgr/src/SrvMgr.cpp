@@ -11,22 +11,6 @@ using std::cout;
 using std::endl;
 using std::string;
 
-
-// to do :  argv and arc
-//          handle ctrl+C to exit gracefully
-//
-// done:    -ping
-//          -kick
-//          -topic
-//          -join
-//          -invite
-//          -nick
-//          -user
-//          -part
-//          -mode
-//          -quit           - sending to channels only instead of broadcast
-//
-
 SrvMgr::SrvMgr(MPlexServer::Server& srv, const string& server_password, const string& server_name) : srv_instance_(srv), server_password_(server_password), server_name_(server_name) {
 }
 
