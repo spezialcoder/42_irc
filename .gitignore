@@ -7,11 +7,6 @@
 # Executables
 ircserv
 
-# Python client (not part of the project)
-irc_client_proper.py
-irc_client.py
-irc_client.sh
-
 # misc
 .vscode
 .idea*
