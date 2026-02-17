@@ -1,19 +1,18 @@
+#include <charconv>
 #include <iostream>
 #include <chrono>
+#include <cstring>
 #include <sstream>
 #include <vector>
-#include <map>
-#include <set>
 #include <string>
 
 #include "server/include/mplexserver.h"
 #include "srvMgr/include/SrvMgr.h"
-#include "srvMgr/include/utils.h"
 
 using namespace MPlexServer;
 
-constexpr int   PORT = 6666;
-constexpr auto SERVER_PASSWORD = "abc";
+//constexpr int   PORT = 6666;
+//constexpr auto SERVER_PASSWORD = "abc";
 constexpr auto SERVER_NAME = "irc.LeMaDa.hn";
 
 int main(int argc, char* argv[]) {
@@ -21,7 +20,14 @@ int main(int argc, char* argv[]) {
         std::cout << "command needs to be in this format:\n./ircserv <port> <password>\n";
         return 1;
     }
-    argv[1]
+    int PORT = -1;
+    auto result = std::from_chars(argv[1],argv[1]+strlen(argv[1]),PORT);
+    if (!(result.ec == std::errc() && *result.ptr == '\0')) {
+        std::cout << "Error parsing port argument!!!" << std::endl;
+        return 1;
+    }
+    std::string SERVER_PASSWORD = argv[2];
+
     Server  srv(PORT);
     //UserManager um(srv);
     SrvMgr sm(srv, SERVER_PASSWORD, SERVER_NAME);
