@@ -16,7 +16,12 @@ constexpr int   PORT = 6666;
 constexpr auto SERVER_PASSWORD = "abc";
 constexpr auto SERVER_NAME = "irc.LeMaDa.hn";
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc != 3) {
+        std::cout << "command needs to be in this format:\n./ircserv <port> <password>\n";
+        return 1;
+    }
+    argv[1]
     Server  srv(PORT);
     //UserManager um(srv);
     SrvMgr sm(srv, SERVER_PASSWORD, SERVER_NAME);
