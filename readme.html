@@ -233,8 +233,6 @@ cd 42_irc</code></pre>
       <h3>3. Run the Server</h3>
       <pre><code>./ircserv</code></pre>
       <ul>
-        <li>Default port: <strong>6666</strong> (see <code>main.cpp</code> to change)</li>
-        <li>Default server password: <strong>abc</strong> (see <code>main.cpp</code>)</li>
 		<li>Default server name: <strong>irc.LeMaDa.hn</strong> (see <code>main.cpp</code>)</li>
 		<li>Leave terminal open while running the server</li>
 		<li>Use Ctrl+C to stop the server gracefully</li>
@@ -242,8 +240,6 @@ cd 42_irc</code></pre>
       <div class="callout">
         <strong>💡 Customization:</strong><br>
         <ul>
-          <li><strong>Port</strong>: Edit <code>constexpr int PORT = 6666;</code> in <code>main.cpp</code></li>
-          <li><strong>Password</strong>: Edit <code>constexpr auto SERVER_PASSWORD = "XXXXXXX";</code> in <code>main.cpp</code></li>
           <li><strong>Server name</strong>: Edit <code>constexpr auto SERVER_NAME = ...</code> in <code>main.cpp</code></li>
         </ul>
       </div>
@@ -294,7 +290,7 @@ cd 42_irc</code></pre>
         <li><strong>Channel management</strong>: <code>/join #channel</code>, <code>/part #channel</code></li>
         <li><strong>Private messaging</strong>: <code>/msg nick message</code></li>
         <li><strong>Server password</strong>: Try connecting with/without the correct password</li>
-        <li><strong>Custom server name/port</strong>: Change in <code>main.cpp</code> and rebuild</li>
+        <li><strong>Custom server name</strong>: Change in <code>main.cpp</code> and rebuild</li>
         <li><strong>Observe debug output</strong>: Watch how the server parses and responds to commands</li>
       </ul>
     </div>
