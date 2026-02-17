@@ -59,8 +59,8 @@ void    SrvMgr::onDisconnect(MPlexServer::Client client) {
                 send_to_chan_all_but_one(channel, msg, nick);
             }
         }
-        server_nicks_.erase(nick);
     }
+    server_nicks_.erase(nick);
     server_users_.erase(client.getFd());
 }
 

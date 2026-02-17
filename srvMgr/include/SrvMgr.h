@@ -42,10 +42,6 @@ private:
     void    change_nick(const std::string &new_nick, const std::string& old_nick, User& user);
     void    change_nick_in_channel(const std::string &new_nick, const std::string& old_nick, Channel &channel);
 
-    /**
-     * @brief   Removes nick from the channel's chan_nicks and chan_ops (if applicable).
-     *          If user was the last user on the channel it gets destroyed.
-     */
     void    remove_user_from_channel(Channel& channel, std::string& nick);
     void    remove_op_from_channel(Channel& channel, std::string& op);
     void    remove_nick_from_channel(Channel& channel, std::string& nick);
@@ -58,6 +54,9 @@ private:
 
     void    join_channel(std::string& chan_name, std::string& key, User& user);
 
+    bool    nick_exists(std::string& nick);
+    bool    chan_exists(std::string& chan_name);
+
     // convenience functions, no "\r\n" needed
     void    send_to_one(const std::string& nick, const std::string& msg);
     void    send_to_one(const User& user, const std::string& msg);
@@ -67,10 +66,6 @@ private:
 
     void    send_channel_command_ack(Channel&, const User&);
     void    send_channel_greetings(Channel&, const User&);
-
-    bool    nick_exists(std::string& nick);
-    bool    chan_exists(std::string& chan_name);
-
 
     std::vector<MPlexServer::Client>    create_client_vector(const std::unordered_set<std::string>& set_of_nicks) const;
 

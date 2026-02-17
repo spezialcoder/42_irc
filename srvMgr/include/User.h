@@ -27,19 +27,19 @@ public:
     std::string             get_hostname();
     std::string             get_signature() const;
 
-    [[nodiscard]] std::string   get_farewell_message() const;
-    void                        set_farewell_message(const std::string &farewell_message);
-    [[nodiscard]] bool          is_logged_in() const;
-    void                        set_as_logged_in(bool is_logged_in);
-    [[nodiscard]] bool          password_provided() const;
-    void                        set_password_provided(bool password_provided);
-    [[nodiscard]] bool          cap_negotiation_ended() const;
-    void                        set_cap_negotiation_ended(bool cap_negotiation_ended);
-    [[nodiscard]] bool          cap_negotiation_started() const;
-    void                        set_cap_negotiation_started(bool cap_negotiation_started);
-    void                        add_invitation(std::string& chan_name);
-    void                        remove_invitation(std::string& chan_name);
-    bool                        has_invitation(std::string& chan_name);
+    std::string             get_farewell_message() const;
+    void                    set_farewell_message(const std::string &farewell_message);
+    bool                    is_logged_in() const;
+    void                    set_as_logged_in(bool is_logged_in);
+    bool                    password_provided() const;
+    void                    set_password_provided(bool password_provided);
+    bool                    cap_negotiation_ended() const;
+    void                    set_cap_negotiation_ended(bool cap_negotiation_ended);
+    bool                    cap_negotiation_started() const;
+    void                    set_cap_negotiation_started(bool cap_negotiation_started);
+    void                    add_invitation(std::string& chan_name);
+    void                    remove_invitation(std::string& chan_name);
+    bool                    has_invitation(std::string& chan_name);
 
 private:
     MPlexServer::Client             client_{};
