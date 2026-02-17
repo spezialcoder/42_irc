@@ -53,18 +53,14 @@ make
 
 ### 3. Run the Server
 ```bash
-./ircserv
+./ircserv <port> <password>
 ```
 
-- Default port: **6666** (see `main.cpp` to change)
-- Default server password: **abc** (see `main.cpp`)
 - Default server name: **irc.LeMaDa.hn** (see `main.cpp`)
 - Leave terminal open while running the server
 - Use Ctrl+C to stop the server gracefully
 
 > 💡 **Customization:**
-> - **Port**: Edit `constexpr int PORT = 6666;` in `main.cpp`
-> - **Password**: Edit `constexpr auto SERVER_PASSWORD = "abc";` in `main.cpp`
 > - **Server name**: Edit `constexpr auto SERVER_NAME = ...` in `main.cpp`
 
 ---
@@ -88,6 +84,10 @@ The server prints status and debug info to the console:
    ```bash
    sudo apt install weechat
    # or use your OS package manager
+   ```
+   oder 
+   ``` bash
+   docker run -it weechat/weechat
    ```
 2. **Start WeeChat**
    ```bash
