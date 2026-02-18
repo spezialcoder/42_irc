@@ -1,3 +1,5 @@
+_This project has been created as part of the 42 curriculum by daspring, lsorg and mnaumann_
+
 # 42_IRC: Modern C++ IRC Chat Server 🚀
 
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg) ![IRC](https://img.shields.io/badge/Protocol-IRC-blueviolet) ![Student Project](https://img.shields.io/badge/Type-Student%20Project-brightgreen)
